@@ -1,0 +1,75 @@
+node_modules/
+dist/
+.env
+.DS_Store
+coverage/
+
+# Environment files — contain sensitive credentials, never commit
+.env
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+.eggs/
+dist/
+build/
+*.so
+
+# Virtual environments
+.venv/
+venv/
+env/
+ENV/
+
+# Testing & coverage
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+
+# IDEs
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS artefacts
+.DS_Store
+Thumbs.db
+
+# hey-api generator cache — exclude node_modules but commit the generated output
+client/typescript/node_modules/
+
+# CLAUDE
+CLAUDE.local.md
+.claude/settings.local.json
+
+# Generated client output — built by CI, not committed
+client/typescript/
+client/python/api/
+client/python/models/
+client/python/client.py
+client/python/errors.py
+client/python/types.py
+client/python/__init__.py
+
+# Local dev assets
+local/certs/
+.env.local
+
+# Benchmark data and generated artifacts
+data/
+results/**
+!results/.gitkeep
+reports/**
+!reports/.gitkeep
+notebooks/**
+!notebooks/.gitkeep
+*.parquet
+*.feather
+*.h5
+*.hdf5
+*.joblib
+*.pkl

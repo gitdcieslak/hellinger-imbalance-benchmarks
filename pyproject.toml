@@ -1,0 +1,52 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "hellinger-imbalance-benchmarks"
+version = "0.1.0"
+description = "Benchmark infrastructure for class imbalance experiments with Hellinger tree baselines."
+readme = "README.md"
+requires-python = ">=3.10"
+license = { file = "LICENSE" }
+authors = [
+  { name = "gitdcieslak" }
+]
+dependencies = [
+  "hellinger-tree",
+  "numpy",
+  "pandas",
+  "scikit-learn",
+  "pyyaml"
+]
+
+[project.optional-dependencies]
+boosting = [
+  "xgboost",
+  "lightgbm"
+]
+imbalanced = [
+  "imbalanced-learn"
+]
+notebooks = [
+  "jupyterlab",
+  "matplotlib",
+  "seaborn"
+]
+dev = [
+  "pytest",
+  "ruff"
+]
+all = [
+  "hellinger-imbalance-benchmarks[boosting,imbalanced,notebooks,dev]"
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/hib"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 88
+target-version = "py310"
