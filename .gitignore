@@ -4,6 +4,12 @@ dist/
 .DS_Store
 coverage/
 
+data/raw/**
+data/extracted/**
+data/processed/**
+!data/README.md
+!data/.gitkeep
+
 # Environment files — contain sensitive credentials, never commit
 .env
 

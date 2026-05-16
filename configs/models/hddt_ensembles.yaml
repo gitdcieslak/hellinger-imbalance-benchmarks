@@ -1,0 +1,7 @@
+models:
+  hddt_forest:
+    family: HDDTForest
+    n_estimators: 50
+    max_features: sqrt
+    bootstrap: true
+    random_state: 42

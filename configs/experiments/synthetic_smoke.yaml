@@ -1,0 +1,16 @@
+experiment_id: synthetic_smoke
+skew_ratios: [1, 10, 100]
+seeds: [0]
+n_repeats: 5
+split_seed: 0
+separation: 2.0
+minority_count: 10
+n_features: 6
+noise: 1.0
+test_size: 0.5
+models:
+  - hddt
+  - bagged_hddt
+  - cart
+  - random_forest
+output_path: results/synthetic_smoke.jsonl

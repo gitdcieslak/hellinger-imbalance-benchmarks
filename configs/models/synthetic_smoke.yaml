@@ -1,0 +1,33 @@
+models:
+  hddt:
+    family: HDDT
+    package: hellinger-tree
+  bagged_hddt:
+    family: Bagged HDDT
+    package: scikit-learn
+    n_estimators: 10
+  cart:
+    family: CART
+    package: scikit-learn
+  random_forest:
+    family: RandomForest
+    package: scikit-learn
+    n_estimators: 50
+  xgboost:
+    family: XGBoost
+    package: xgboost
+    n_estimators: 50
+    max_depth: 4
+    learning_rate: 0.1
+    random_state: 42
+
+  lightgbm:
+    family: LightGBM
+    package: lightgbm
+    n_estimators: 50
+    max_depth: -1
+    learning_rate: 0.1
+    min_child_samples: 1
+    min_data_in_leaf: 1
+    random_state: 42
+    verbose: -1
