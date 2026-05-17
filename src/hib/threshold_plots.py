@@ -13,6 +13,7 @@ import matplotlib.pyplot as plt  # noqa: E402
 
 KNOWN_MODEL_ORDER = ["cart", "hddt", "bagged_hddt", "random_forest", "xgboost", "lightgbm"]
 DEFAULT_METRICS = ["recall", "f1", "precision", "balanced_accuracy"]
+DEFAULT_THRESHOLD_ORDER = [0.50, 0.25, 0.10, 0.05, 0.01]
 
 
 def load_threshold_summary_csv(path: str | Path) -> pd.DataFrame:
@@ -46,6 +47,131 @@ def _source_group_column(frame: pd.DataFrame) -> str:
 def _plot_paths(output_dir: Path, source: str, dataset_id: str, metric: str) -> tuple[Path, Path]:
     stem = f"{source}_{dataset_id}_{metric}_vs_threshold"
     return output_dir / f"{stem}.png", output_dir / f"{stem}.svg"
+
+
+def trajectory_plot_paths(output_dir: Path, source: str, dataset_id: str) -> tuple[Path, Path]:
+    """Build deterministic precision-recall trajectory output paths."""
+
+    if source == "synthetic":
+        stem = f"{source}_skew_{dataset_id}_precision_recall_trajectory"
+    else:
+        stem = f"{source}_{dataset_id}_precision_recall_trajectory"
+    return output_dir / f"{stem}.png", output_dir / f"{stem}.svg"
+
+
+def _require_trajectory_columns(frame: pd.DataFrame) -> None:
+    required = {"model_id", "threshold", "recall_mean", "precision_mean"}
+    if "dataset_id" not in frame.columns and "skew_ratio" not in frame.columns:
+        raise ValueError("trajectory summary must include either dataset_id or skew_ratio")
+    missing = sorted(required - set(frame.columns))
+    if missing:
+        raise ValueError(f"missing required trajectory columns: {', '.join(missing)}")
+
+
+def threshold_descending_values(frame: pd.DataFrame) -> list[float]:
+    """Return thresholds in descending operational order."""
+
+    available = sorted([float(value) for value in frame["threshold"].unique()], reverse=True)
+    ordered = [value for value in DEFAULT_THRESHOLD_ORDER if value in available]
+    extras = [value for value in available if value not in ordered]
+    return ordered + extras
+
+
+def plot_precision_recall_threshold_trajectory(
+    dataset_frame: pd.DataFrame,
+    dataset_id: str,
+    source: str,
+    output_dir: str | Path,
+    annotate_thresholds: bool = True,
+) -> list[Path]:
+    """Plot recall-precision threshold relaxation trajectories for one dataset."""
+
+    _require_trajectory_columns(dataset_frame)
+    out_dir = Path(output_dir)
+    out_dir.mkdir(parents=True, exist_ok=True)
+    threshold_order = threshold_descending_values(dataset_frame)
+    model_order = ordered_model_ids(dataset_frame["model_id"].astype(str).tolist())
+
+    fig, ax = plt.subplots(figsize=(8, 6))
+    for model_id in model_order:
+        subset = dataset_frame[dataset_frame["model_id"] == model_id].copy()
+        if subset.empty:
+            continue
+        subset["threshold"] = subset["threshold"].astype(float)
+        subset = subset.set_index("threshold").reindex(threshold_order).dropna(subset=["recall_mean", "precision_mean"])
+        if subset.empty:
+            continue
+        x = subset["recall_mean"].to_numpy(dtype=float)
+        y = subset["precision_mean"].to_numpy(dtype=float)
+        t = subset.index.to_numpy(dtype=float)
+        ax.plot(x, y, marker="o", linewidth=1.8, label=model_id)
+        if annotate_thresholds:
+            for x_i, y_i, t_i in zip(x, y, t, strict=False):
+                ax.annotate(f"{t_i:.2f}", (x_i, y_i), textcoords="offset points", xytext=(3, 3), fontsize=7)
+
+    ax.set_xlim(0.0, 1.0)
+    ax.set_ylim(0.0, 1.0)
+    ax.set_xlabel("Recall")
+    ax.set_ylabel("Precision")
+    ax.set_title(f"{dataset_id}: Precision-Recall Threshold Trajectory ({source})")
+    ax.grid(True, alpha=0.35)
+    ax.legend(loc="best")
+    fig.tight_layout()
+
+    png_path, svg_path = trajectory_plot_paths(out_dir, source, str(dataset_id))
+    fig.savefig(png_path, dpi=120)
+    fig.savefig(svg_path)
+    plt.close(fig)
+    return [png_path, svg_path]
+
+
+def plot_trajectory_panel(
+    summary: pd.DataFrame,
+    dataset_id: str,
+    source: str,
+    output_dir: str | Path = "reports/plots/threshold_trajectories",
+    annotate_thresholds: bool = True,
+) -> list[Path]:
+    """Plot one precision-recall threshold trajectory panel for a dataset."""
+
+    _require_trajectory_columns(summary)
+    group_col = _source_group_column(summary)
+    dataset_frame = summary[summary[group_col].astype(str) == str(dataset_id)].copy()
+    if dataset_frame.empty:
+        raise ValueError(f"dataset {dataset_id!r} not found in threshold summary")
+    return plot_precision_recall_threshold_trajectory(
+        dataset_frame=dataset_frame,
+        dataset_id=str(dataset_id),
+        source=source,
+        output_dir=output_dir,
+        annotate_thresholds=annotate_thresholds,
+    )
+
+
+def plot_threshold_trajectories(
+    summary: pd.DataFrame,
+    source: str = "legacy",
+    datasets: list[str] | None = None,
+    output_dir: str | Path = "reports/plots/threshold_trajectories",
+    annotate_thresholds: bool = True,
+) -> list[Path]:
+    """Plot precision-recall threshold trajectories for selected datasets."""
+
+    _require_trajectory_columns(summary)
+    group_col = _source_group_column(summary)
+    dataset_ids = sorted(summary[group_col].astype(str).unique().tolist()) if datasets is None else [str(item) for item in datasets]
+    created: list[Path] = []
+    for dataset_id in dataset_ids:
+        created.extend(
+            plot_trajectory_panel(
+                summary=summary,
+                dataset_id=dataset_id,
+                source=source,
+                output_dir=output_dir,
+                annotate_thresholds=annotate_thresholds,
+            )
+        )
+    return created
 
 
 def plot_metric_vs_threshold(
