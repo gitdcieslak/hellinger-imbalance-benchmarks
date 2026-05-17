@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import warnings
 from typing import Any
 
 import numpy as np
@@ -20,7 +21,13 @@ def positive_class_scores(model: Any, X: np.ndarray) -> np.ndarray:
     """Return positive-class scores from a fitted binary classifier."""
 
     if hasattr(model, "predict_proba"):
-        probabilities = model.predict_proba(X)
+        with warnings.catch_warnings():
+            warnings.filterwarnings(
+                "ignore",
+                message="X does not have valid feature names, but LGBMClassifier was fitted with feature names",
+                category=UserWarning,
+            )
+            probabilities = model.predict_proba(X)
         if probabilities.shape[1] == 1:
             return probabilities[:, 0]
         return probabilities[:, 1]
@@ -50,6 +57,12 @@ def compute_binary_metrics(
 def evaluate_model(model: Any, X: np.ndarray, y: np.ndarray) -> dict[str, float]:
     """Compute core metrics for a fitted model."""
 
-    y_pred = model.predict(X)
+    with warnings.catch_warnings():
+        warnings.filterwarnings(
+            "ignore",
+            message="X does not have valid feature names, but LGBMClassifier was fitted with feature names",
+            category=UserWarning,
+        )
+        y_pred = model.predict(X)
     y_score = positive_class_scores(model, X)
     return compute_binary_metrics(y, y_pred, y_score)

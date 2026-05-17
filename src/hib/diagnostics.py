@@ -8,6 +8,7 @@ from typing import Any
 
 import numpy as np
 
+from hib.arrays import ensure_numpy_array, ensure_numpy_vector
 from hib.metrics import positive_class_scores
 from hib.models import OptionalDependencyUnavailable, make_model
 from hib.runner import apply_split_dependent_model_params, compute_binary_class_weight_ratio
@@ -61,6 +62,10 @@ def lightgbm_weighting_diagnostic(
     """Run LightGBM weighting equivalence diagnostics on one split."""
 
     try:
+        X_train = ensure_numpy_array(X_train)
+        y_train = ensure_numpy_vector(y_train)
+        X_test = ensure_numpy_array(X_test)
+        y_test = ensure_numpy_vector(y_test)
         ratio = compute_binary_class_weight_ratio(y_train)
         params = resolve_lightgbm_variant_params(y_train, seed=seed)
     except OptionalDependencyUnavailable:

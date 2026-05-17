@@ -14,6 +14,7 @@ import numpy as np
 import pandas as pd
 import yaml
 
+from hib.arrays import ensure_numpy_array, ensure_numpy_vector
 from hib.datasets.legacy_loader import load_legacy_hddt_dataset
 from hib.datasets.legacy_registry import LEGACY_HDDT_DATASET_REGISTRY as CURATED_LEGACY_HDDT_DATASET_REGISTRY
 from hib.metrics import evaluate_model
@@ -234,6 +235,8 @@ def fit_or_skip_model(model: Any, X_train: np.ndarray, y_train: np.ndarray) -> b
 
     try:
         model.fit(X_train, y_train)
+        if isinstance(X_train, np.ndarray) and hasattr(model, "feature_names_in_"):
+            delattr(model, "feature_names_in_")
     except ValueError as exc:
         message = str(exc)
         if "supports binary classification only" in message:
@@ -280,6 +283,10 @@ def run_synthetic_suite(config: dict[str, Any]) -> list[dict[str, Any]]:
                 y_train = y[split_spec.train_idx]
                 X_test = X[split_spec.test_idx]
                 y_test = y[split_spec.test_idx]
+                X_train = ensure_numpy_array(X_train)
+                y_train = ensure_numpy_vector(y_train)
+                X_test = ensure_numpy_array(X_test)
+                y_test = ensure_numpy_vector(y_test)
 
                 for model_id in model_ids:
                     try:
@@ -360,6 +367,10 @@ def run_threshold_sweep_suite(config: dict[str, Any]) -> list[dict[str, Any]]:
                 y_train = y[split_spec.train_idx]
                 X_test = X[split_spec.test_idx]
                 y_test = y[split_spec.test_idx]
+                X_train = ensure_numpy_array(X_train)
+                y_train = ensure_numpy_vector(y_train)
+                X_test = ensure_numpy_array(X_test)
+                y_test = ensure_numpy_vector(y_test)
 
                 for model_id in model_ids:
                     try:
@@ -506,6 +517,8 @@ def run_legacy_hddt_benchmark(
             raise ValueError(f"unknown legacy dataset id: {dataset_id}")
         dataset_entry = CURATED_LEGACY_HDDT_DATASET_REGISTRY[dataset_id]
         X, y, metadata = load_legacy_hddt_dataset(extracted, dataset_entry)
+        X = ensure_numpy_array(X)
+        y = ensure_numpy_vector(y)
         split_specs = generate_stratified_repeated_splits(
             y,
             n_repeats=int(n_repeats),
@@ -624,6 +637,10 @@ def run_score_analysis_suite(config: dict[str, Any]) -> list[dict[str, Any]]:
                 y_train = y[split_spec.train_idx]
                 X_test = X[split_spec.test_idx]
                 y_test = y[split_spec.test_idx]
+                X_train = ensure_numpy_array(X_train)
+                y_train = ensure_numpy_vector(y_train)
+                X_test = ensure_numpy_array(X_test)
+                y_test = ensure_numpy_vector(y_test)
                 train_pos = int(np.sum(y_train == 1))
                 train_n = int(y_train.size)
                 test_pos = int(np.sum(y_test == 1))
@@ -722,6 +739,10 @@ def run_score_separation_suite(config: dict[str, Any]) -> list[dict[str, Any]]:
                 y_train = y[split_spec.train_idx]
                 X_test = X[split_spec.test_idx]
                 y_test = y[split_spec.test_idx]
+                X_train = ensure_numpy_array(X_train)
+                y_train = ensure_numpy_vector(y_train)
+                X_test = ensure_numpy_array(X_test)
+                y_test = ensure_numpy_vector(y_test)
                 train_pos = int(np.sum(y_train == 1))
                 train_n = int(y_train.size)
                 test_pos = int(np.sum(y_test == 1))
@@ -820,6 +841,10 @@ def collect_score_distribution_data(config: dict[str, Any]) -> list[dict[str, An
                 y_train = y[split_spec.train_idx]
                 X_test = X[split_spec.test_idx]
                 y_test = y[split_spec.test_idx]
+                X_train = ensure_numpy_array(X_train)
+                y_train = ensure_numpy_vector(y_train)
+                X_test = ensure_numpy_array(X_test)
+                y_test = ensure_numpy_vector(y_test)
 
                 for model_id in model_ids:
                     try:
