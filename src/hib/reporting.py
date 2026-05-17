@@ -241,6 +241,63 @@ def summarize_threshold_jsonl(
     return csv_path, markdown_path
 
 
+def summarize_legacy_threshold_records(records: list[dict[str, Any]]) -> pd.DataFrame:
+    """Aggregate legacy threshold records by dataset, model, and threshold."""
+
+    rows: list[dict[str, Any]] = []
+    for record in records:
+        row = {
+            "dataset_id": record["dataset_id"],
+            "source_group": record.get("source_group", "unknown"),
+            "model_id": record["model_id"],
+            "threshold": float(record["threshold"]),
+        }
+        row.update({metric: record["metrics"][metric] for metric in THRESHOLD_METRIC_NAMES})
+        rows.append(row)
+
+    frame = pd.DataFrame(rows)
+    grouped = frame.groupby(["dataset_id", "source_group", "model_id", "threshold"], as_index=False)[
+        THRESHOLD_METRIC_NAMES
+    ]
+    summary = grouped.agg(["mean", "std"])
+    summary.columns = [
+        "_".join(column).strip("_") if isinstance(column, tuple) else column
+        for column in summary.columns
+    ]
+    std_columns = [f"{metric}_std" for metric in THRESHOLD_METRIC_NAMES]
+    summary[std_columns] = summary[std_columns].fillna(0.0)
+    run_counts = (
+        frame.groupby(["dataset_id", "source_group", "model_id", "threshold"])
+        .size()
+        .reset_index(name="n_runs")
+    )
+    summary = summary.merge(
+        run_counts,
+        on=["dataset_id", "source_group", "model_id", "threshold"],
+        how="left",
+    )
+    return summary.sort_values(["dataset_id", "model_id", "threshold"]).reset_index(drop=True)
+
+
+def legacy_threshold_summary_to_markdown(summary: pd.DataFrame) -> str:
+    """Render legacy threshold sweep summary grouped by dataset."""
+
+    sections = ["# Legacy HDDT Threshold Sweep Summary", ""]
+    for dataset_id, group in summary.groupby("dataset_id", sort=True):
+        table = _frame_to_markdown(group.drop(columns=["dataset_id"]))
+        sections.extend([f"## Dataset {dataset_id}", "", table, ""])
+    return "\n".join(sections).rstrip() + "\n"
+
+
+def write_legacy_threshold_summary_markdown(summary: pd.DataFrame, output_path: str | Path) -> Path:
+    """Write a markdown report for legacy threshold sweep summaries."""
+
+    path = Path(output_path)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(legacy_threshold_summary_to_markdown(summary), encoding="utf-8")
+    return path
+
+
 def score_records_to_frame(records: list[dict[str, Any]]) -> pd.DataFrame:
     """Convert score-analysis JSONL records to a flat dataframe."""
 

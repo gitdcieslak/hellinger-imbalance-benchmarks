@@ -573,6 +573,115 @@ def run_legacy_hddt_benchmark(
     return records
 
 
+def run_legacy_threshold_sweep(
+    dataset_ids: list[str],
+    model_ids: list[str],
+    extracted_dir: str | Path = DEFAULT_LEGACY_EXTRACTED_DIR,
+    n_repeats: int = 5,
+    test_size: float = 0.5,
+    split_seed: int = 0,
+    seed: int = 0,
+    thresholds: list[float] | None = None,
+    model_params: dict[str, dict[str, Any]] | None = None,
+    experiment_id: str = "legacy_hddt_threshold_sweep",
+) -> list[dict[str, Any]]:
+    """Run fixed-threshold sweeps over curated legacy HDDT datasets."""
+
+    unknown_models = sorted(set(model_ids) - set(available_model_ids()))
+    if unknown_models:
+        raise ValueError(f"unknown model ids: {', '.join(unknown_models)}")
+
+    records: list[dict[str, Any]] = []
+    versions = package_versions()
+    extracted = Path(extracted_dir)
+    threshold_values = (
+        [float(threshold) for threshold in thresholds]
+        if thresholds is not None
+        else [float(threshold) for threshold in DEFAULT_THRESHOLDS]
+    )
+
+    for dataset_id in dataset_ids:
+        if dataset_id not in CURATED_LEGACY_HDDT_DATASET_REGISTRY:
+            raise ValueError(f"unknown legacy dataset id: {dataset_id}")
+        dataset_entry = CURATED_LEGACY_HDDT_DATASET_REGISTRY[dataset_id]
+        X, y, metadata = load_legacy_hddt_dataset(extracted, dataset_entry)
+        X = ensure_numpy_array(X)
+        y = ensure_numpy_vector(y)
+        split_specs = generate_stratified_repeated_splits(
+            y,
+            n_repeats=int(n_repeats),
+            test_size=float(test_size),
+            random_seed=int(split_seed),
+        )
+
+        for split_spec in split_specs:
+            X_train = ensure_numpy_array(X[split_spec.train_idx])
+            y_train = ensure_numpy_vector(y[split_spec.train_idx])
+            X_test = ensure_numpy_array(X[split_spec.test_idx])
+            y_test = ensure_numpy_vector(y[split_spec.test_idx])
+
+            for model_id in model_ids:
+                try:
+                    model = make_model(model_id, seed=int(seed))
+                except OptionalDependencyUnavailable:
+                    continue
+                model = apply_model_config_params(model, model_id, model_params)
+                model = apply_split_dependent_ensemble_params(model, model_id, X_train)
+                model = apply_split_dependent_model_params(model, model_id, y_train)
+                if not fit_or_skip_model(model, X_train, y_train):
+                    continue
+                y_score = positive_class_scores(model, X_test)
+
+                train_pos = int(np.sum(y_train == 1))
+                train_n = int(y_train.size)
+                test_pos = int(np.sum(y_test == 1))
+                test_n = int(y_test.size)
+                for threshold_result in sweep_thresholds(y_test, y_score, threshold_values):
+                    records.append(
+                        {
+                            "experiment_id": experiment_id,
+                            "dataset_id": dataset_id,
+                            "source_group": dataset_entry.get("source_group", "unknown"),
+                            "model_id": model_id,
+                            "threshold": threshold_result["threshold"],
+                            "seed": int(seed),
+                            "repeat_id": split_spec.repeat_id,
+                            "split_id": split_spec.split_id,
+                            "split_seed": split_spec.split_seed,
+                            "train_n": train_n,
+                            "test_n": test_n,
+                            "train_pos": train_pos,
+                            "train_neg": train_n - train_pos,
+                            "test_pos": test_pos,
+                            "test_neg": test_n - test_pos,
+                            "dataset_metadata": metadata,
+                            "metrics": threshold_result["metrics"],
+                            "package_versions": versions,
+                            "timestamp": datetime.now(timezone.utc).isoformat(),
+                        }
+                    )
+    return records
+
+
+def run_legacy_threshold_sweep_from_config(
+    dataset_ids: list[str],
+    model_paths: list[str | Path] | None = None,
+    output_path: str | Path = "results/legacy_hddt_threshold_sweep.jsonl",
+    thresholds: list[float] | None = None,
+) -> Path:
+    """Run legacy threshold sweep using model config files and write JSONL."""
+
+    loaded_model_paths = model_paths or [DEFAULT_MODEL_CONFIG_PATH]
+    model_configs = load_model_configs(loaded_model_paths)
+    records = run_legacy_threshold_sweep(
+        dataset_ids=dataset_ids,
+        model_ids=list(model_configs),
+        thresholds=thresholds,
+        model_params=model_configs,
+    )
+    return write_jsonl(records, output_path)
+
+
 def run_from_config(
     path: str | Path | None = None,
     model_paths: list[str | Path] | None = None,
