@@ -78,3 +78,7 @@ notebooks/**
 *.hdf5
 *.joblib
 *.pkl
+
+# Research artifact snapshots
+research/artifacts/runs/**
+!research/artifacts/README.md
