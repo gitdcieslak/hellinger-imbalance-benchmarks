@@ -11,8 +11,11 @@ from pathlib import Path
 from typing import Any
 
 import numpy as np
+import pandas as pd
 import yaml
 
+from hib.datasets.legacy_loader import load_legacy_hddt_dataset
+from hib.datasets.legacy_registry import LEGACY_HDDT_DATASET_REGISTRY as CURATED_LEGACY_HDDT_DATASET_REGISTRY
 from hib.metrics import evaluate_model
 from hib.metrics import positive_class_scores
 from hib.models import OptionalDependencyUnavailable, available_model_ids, make_model
@@ -26,6 +29,7 @@ from hib.thresholds import DEFAULT_THRESHOLDS, sweep_thresholds
 DEFAULT_EXPERIMENT_CONFIG_PATH = Path("configs/experiments/synthetic_smoke.yaml")
 DEFAULT_MODEL_CONFIG_PATH = Path("configs/models/synthetic_smoke.yaml")
 DEFAULT_METRIC_CONFIG_PATH = Path("configs/metrics/core_imbalance.yaml")
+DEFAULT_LEGACY_EXTRACTED_DIR = Path("data/extracted/legacy_hddt")
 KNOWN_MODEL_FAMILIES = {
     "HDDT",
     "Bagged HDDT",
@@ -408,6 +412,152 @@ def write_jsonl(records: list[dict[str, Any]], output_path: str | Path) -> Path:
         for record in records:
             handle.write(json.dumps(record, sort_keys=True) + "\n")
     return path
+
+
+def summarize_legacy_records(records: list[dict[str, Any]]) -> pd.DataFrame:
+    """Aggregate legacy benchmark records by dataset and model."""
+
+    metric_names = [
+        "auroc",
+        "average_precision",
+        "f1",
+        "precision",
+        "recall",
+        "balanced_accuracy",
+        "brier_score",
+    ]
+    rows: list[dict[str, Any]] = []
+    for record in records:
+        row = {
+            "dataset_id": record["dataset_id"],
+            "source_group": record.get("source_group", "unknown"),
+            "model_id": record["model_id"],
+        }
+        row.update({metric: record["metrics"][metric] for metric in metric_names})
+        rows.append(row)
+    frame = pd.DataFrame(rows)
+    grouped = frame.groupby(["dataset_id", "source_group", "model_id"], as_index=False)[
+        metric_names
+    ]
+    summary = grouped.agg(["mean", "std"])
+    summary.columns = [
+        "_".join(column).strip("_") if isinstance(column, tuple) else column
+        for column in summary.columns
+    ]
+    std_columns = [f"{metric}_std" for metric in metric_names]
+    summary[std_columns] = summary[std_columns].fillna(0.0)
+    run_counts = (
+        frame.groupby(["dataset_id", "source_group", "model_id"]).size().reset_index(name="n_runs")
+    )
+    summary = summary.merge(run_counts, on=["dataset_id", "source_group", "model_id"], how="left")
+    return summary.sort_values(["dataset_id", "model_id"]).reset_index(drop=True)
+
+
+def write_legacy_summary_markdown(summary: pd.DataFrame, output_path: str | Path) -> Path:
+    """Write markdown summary for legacy benchmark records."""
+
+    lines = ["# Legacy HDDT Benchmark Summary", ""]
+    for dataset_id, group in summary.groupby("dataset_id", sort=True):
+        lines.append(f"## Dataset {dataset_id}")
+        lines.append("")
+        display = group.drop(columns=["dataset_id"])
+        columns = list(display.columns)
+        lines.append("| " + " | ".join(columns) + " |")
+        lines.append("| " + " | ".join(["---"] * len(columns)) + " |")
+        for row in display.itertuples(index=False, name=None):
+            values: list[str] = []
+            for value in row:
+                if isinstance(value, float):
+                    values.append(f"{value:.4f}")
+                else:
+                    values.append(str(value))
+            lines.append("| " + " | ".join(values) + " |")
+        lines.append("")
+
+    path = Path(output_path)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text("\n".join(lines).rstrip() + "\n", encoding="utf-8")
+    return path
+
+
+def run_legacy_hddt_benchmark(
+    dataset_ids: list[str],
+    model_ids: list[str],
+    extracted_dir: str | Path = DEFAULT_LEGACY_EXTRACTED_DIR,
+    n_repeats: int = 5,
+    test_size: float = 0.5,
+    split_seed: int = 0,
+    seed: int = 0,
+    model_params: dict[str, dict[str, Any]] | None = None,
+    experiment_id: str = "legacy_hddt_benchmark",
+) -> list[dict[str, Any]]:
+    """Run 5x2-style benchmark over curated legacy HDDT datasets."""
+
+    unknown_models = sorted(set(model_ids) - set(available_model_ids()))
+    if unknown_models:
+        raise ValueError(f"unknown model ids: {', '.join(unknown_models)}")
+
+    records: list[dict[str, Any]] = []
+    versions = package_versions()
+    extracted = Path(extracted_dir)
+
+    for dataset_id in dataset_ids:
+        if dataset_id not in CURATED_LEGACY_HDDT_DATASET_REGISTRY:
+            raise ValueError(f"unknown legacy dataset id: {dataset_id}")
+        dataset_entry = CURATED_LEGACY_HDDT_DATASET_REGISTRY[dataset_id]
+        X, y, metadata = load_legacy_hddt_dataset(extracted, dataset_entry)
+        split_specs = generate_stratified_repeated_splits(
+            y,
+            n_repeats=int(n_repeats),
+            test_size=float(test_size),
+            random_seed=int(split_seed),
+        )
+
+        for split_spec in split_specs:
+            X_train = X[split_spec.train_idx]
+            y_train = y[split_spec.train_idx]
+            X_test = X[split_spec.test_idx]
+            y_test = y[split_spec.test_idx]
+
+            for model_id in model_ids:
+                try:
+                    model = make_model(model_id, seed=int(seed))
+                except OptionalDependencyUnavailable:
+                    continue
+                model = apply_model_config_params(model, model_id, model_params)
+                model = apply_split_dependent_ensemble_params(model, model_id, X_train)
+                model = apply_split_dependent_model_params(model, model_id, y_train)
+                if not fit_or_skip_model(model, X_train, y_train):
+                    continue
+                metrics = evaluate_model(model, X_test, y_test)
+                train_pos = int(np.sum(y_train == 1))
+                train_n = int(y_train.size)
+                test_pos = int(np.sum(y_test == 1))
+                test_n = int(y_test.size)
+                records.append(
+                    {
+                        "experiment_id": experiment_id,
+                        "dataset_id": dataset_id,
+                        "source_group": dataset_entry.get("source_group", "unknown"),
+                        "model_id": model_id,
+                        "seed": int(seed),
+                        "repeat_id": split_spec.repeat_id,
+                        "split_id": split_spec.split_id,
+                        "split_seed": split_spec.split_seed,
+                        "train_n": train_n,
+                        "test_n": test_n,
+                        "train_pos": train_pos,
+                        "train_neg": train_n - train_pos,
+                        "test_pos": test_pos,
+                        "test_neg": test_n - test_pos,
+                        "dataset_metadata": metadata,
+                        "metrics": metrics,
+                        "package_versions": versions,
+                        "timestamp": datetime.now(timezone.utc).isoformat(),
+                    }
+                )
+
+    return records
 
 
 def run_from_config(
