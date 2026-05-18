@@ -443,3 +443,182 @@ and evolving toward:
 > “How do different classifier families express uncertainty and allocate posterior probability mass under severe class imbalance?”
 
 This appears substantially more scientifically interesting.
+
+# 2026-05-18
+
+## Allocation Geometry Is Becoming the Central Theme
+
+The project now appears to be converging on:
+
+> operational allocation geometry under severe imbalance
+
+rather than:
+- classifier leaderboard performance,
+- or generic imbalance benchmarking.
+
+This feels like the most important conceptual clarification so far.
+
+---
+
+# Allocation Concentration Metrics
+
+Implemented:
+- entropy,
+- effective support size,
+- Gini concentration,
+- score-mass occupancy metrics.
+
+Initial observations:
+
+## CART
+- extremely low entropy,
+- extremely low support size,
+- effectively quantized posterior allocation.
+
+Operational interpretation:
+- threshold movement has almost no effect,
+- posterior space appears discretized.
+
+This now strongly supports the:
+> “quantized allocator”
+framing.
+
+---
+
+## XGBoost
+- moderate entropy,
+- but extremely high recall elasticity,
+- strongest cliff behavior observed so far.
+
+Operational interpretation:
+- XGBoost appears highly operationally unstable under severe imbalance,
+- recall recovery often occurs abruptly only after aggressive threshold relaxation.
+
+This appears to support:
+> “cliff allocator”
+behavior.
+
+---
+
+## HDDT and Bagged HDDT
+Observed:
+- broader support,
+- smoother recall recovery,
+- less catastrophic threshold collapse.
+
+Bagged HDDT in particular appears:
+- operationally stable,
+- relatively controllable,
+- surprisingly competitive.
+
+Possible interpretation:
+- bagging stabilizes minority posterior allocation geometry.
+
+This is becoming scientifically interesting.
+
+---
+
+# Threshold Elasticity Appears Extremely Important
+
+Threshold elasticity analysis appears more informative than expected.
+
+The most important distinction now may not be:
+- ranking quality,
+
+but:
+- how operational behavior changes as thresholds relax.
+
+This seems especially relevant in:
+- human-review systems,
+- queue-based fraud systems,
+- medical triage pipelines.
+
+Potential key idea:
+> some classifiers are operationally fragile.
+
+---
+
+# Precision–Recall Trajectories
+
+The new trajectory plots appear extremely valuable.
+
+Observed:
+- boosted ensembles often exhibit long low-recall regions followed by abrupt transitions,
+- CART trajectories remain nearly stationary,
+- HDDT-family models appear smoother and broader.
+
+The trajectory framing feels substantially stronger than:
+- static PR curves,
+- or isolated threshold plots.
+
+Potential interpretation:
+- classifiers trace fundamentally different operational paths through deployment space.
+
+---
+
+# Emerging Big Picture
+
+The project now appears to concern:
+
+| Property | Meaning |
+|---|---|
+| Ranking quality | relative ordering ability |
+| Allocation geometry | posterior mass structure |
+| Threshold elasticity | operational sensitivity |
+| Smoothness | deployment controllability |
+| Calibration | probabilistic correctness |
+
+These properties increasingly appear:
+- related,
+- but non-equivalent.
+
+This may ultimately become the central scientific contribution.
+
+---
+
+# Important Open Questions
+
+## Calibration Interaction
+Does calibration:
+- fundamentally alter allocation geometry,
+or:
+- merely reparameterize thresholds?
+
+This now feels like one of the most important unresolved questions.
+
+---
+
+## Prediction-Space Occupancy
+Need to investigate:
+- minority occupancy regions,
+- posterior sparsity,
+- score manifold structure,
+- score quantization.
+
+This could become:
+- a major figure family,
+- or possibly a follow-on paper.
+
+---
+
+## Neural Tabular Models
+Unknown:
+- whether neural tabular models behave more like:
+  - conservative allocators,
+  - cliff allocators,
+  - or broad allocators.
+
+Potentially important future comparison.
+
+---
+
+# Meta Observation
+
+The project increasingly feels less like:
+- an HDDT reproduction study,
+
+and more like:
+
+> a study of operational probability allocation behavior under severe class imbalance.
+
+That conceptual transition now feels complete.

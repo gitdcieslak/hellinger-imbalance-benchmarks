@@ -1,206 +1,191 @@
-# Strategic Narrative — HDDT Imbalance Study
+# Strategic Narrative — Operational Allocation Geometry Under Imbalance
 
 ## Original Goal
 
-The original intent of this project was relatively straightforward:
+The original intent of the project was:
+- reimplement HDDT,
+- modernize the original benchmark environment,
+- compare HDDT against modern ensemble methods,
+- determine whether HDDT still provided meaningful imbalance advantages.
 
-- reimplement Hellinger Distance Decision Trees (HDDT),
-- modernize the original benchmarking environment,
-- compare HDDT against modern ensemble methods such as:
-  - Random Forest,
-  - XGBoost,
-  - LightGBM,
-- evaluate whether the original HDDT imbalance claims still hold under modern baselines.
-
-The initial framing was essentially:
-
+Initial framing:
 > “Does HDDT still matter?”
 
 ---
 
-# Evolution of the Project
+# Conceptual Evolution
 
-As the benchmark framework matured, the project evolved significantly.
+As the benchmark infrastructure matured, the project evolved substantially.
 
 The work expanded from:
-- simple classifier comparison,
-- toward studying the operational behavior of probabilistic classifiers under severe class imbalance.
+- classifier comparison,
+toward:
+- operational behavior analysis under severe imbalance.
 
-Several infrastructure additions enabled this transition:
+The critical shift was realizing that:
+- ranking quality,
+- posterior probability allocation,
+- and operational deployment behavior
 
-- repeated 5x2 stratified evaluation,
-- threshold sweep analysis,
-- score distribution analysis,
-- separation metrics,
-- score visualization,
-- synthetic imbalance generation,
-- legacy HDDT dataset ingestion,
-- curated benchmark registry,
-- operational reporting.
-
-The project increasingly shifted away from:
-- “who wins AUROC?”,
-and toward:
-- “how do classifiers allocate posterior probability mass under imbalance?”
+appear to be related but fundamentally non-equivalent properties.
 
 ---
 
-# Current Core Hypothesis
+# Emerging Core Thesis
 
-A major emerging hypothesis is:
+The project now centers on the following hypothesis:
 
-> Ranking quality and operational probability allocation behavior are meaningfully different properties under severe class imbalance.
+> Severe class imbalance induces distinct operational allocation geometries across classifier families, and these geometries are not captured by ranking metrics alone.
 
 In particular:
-- modern ensemble methods often achieve strong AUROC and Average Precision,
-- while simultaneously allocating extremely conservative posterior probabilities to minority examples,
-- leading to operational collapse at default deployment thresholds (e.g. 0.50).
+- models may achieve excellent AUROC and Average Precision,
+- while simultaneously allocating extremely conservative posterior probabilities,
+- producing catastrophic operational recall collapse at realistic deployment thresholds.
 
 This phenomenon appears repeatedly across:
-- synthetic imbalance experiments,
-- and real legacy HDDT datasets.
+- synthetic imbalance studies,
+- and legacy HDDT datasets.
 
 ---
 
-# Emerging Observations
+# Key Emerging Concepts
 
-## 1. Threshold Collapse
+## Allocation Geometry
+How a classifier distributes posterior probability mass under imbalance.
 
-On several severely imbalanced datasets:
-- `boundary`
-- `cam`
-- `compustat`
-- `oil`
+Includes:
+- concentration,
+- support,
+- sparsity,
+- posterior compression,
+- threshold occupancy.
 
-models such as:
-- Random Forest,
-- XGBoost,
+## Threshold Elasticity
+Sensitivity of operational metrics to threshold relaxation.
+
+Key question:
+> how rapidly does recall recover as thresholds relax?
+
+## Operational Smoothness
+Whether deployment behavior changes:
+- continuously,
+or:
+- abruptly.
+
+## Allocation Regimes
+Distinct operational families of posterior allocation behavior.
+
+---
+
+# Emerging Operational Regimes
+
+## Conservative Allocators
+Characteristics:
+- strong ranking,
+- compressed minority posterior allocation,
+- weak default-threshold recall.
+
+Examples:
 - LightGBM
-
-often produce:
-- high AUROC,
-- strong ranking behavior,
-- but near-zero recall at threshold 0.50.
-
-However:
-- lowering thresholds to 0.01 or 0.05 frequently recovers substantial recall.
-
-This suggests:
-- the models know where positives are,
-- but allocate insufficient posterior mass at operational thresholds.
-
-This behavior has been referred to internally as:
-
-> “threshold collapse”
+- Random Forest
+- XGBoost
 
 ---
 
-## 2. CART Threshold Invariance
+## Cliff Allocators
+Characteristics:
+- abrupt nonlinear recall recovery,
+- severe threshold sensitivity,
+- operational instability.
 
-CART models behave differently.
-
-Observed behavior:
-- threshold sweeps often produce nearly identical metrics across thresholds,
-- suggesting highly discrete posterior allocation,
-- with leaf probabilities behaving almost like hard partitions.
-
-This contrasts sharply with:
-- RF,
-- XGB,
-- LightGBM.
-
-Emerging interpretation:
-- CART may represent a fundamentally different score geometry regime.
+Strongest observed example:
+- XGBoost
 
 ---
 
-## 3. HDDT Operational Distinctiveness
+## Quantized Allocators
+Characteristics:
+- threshold-invariant behavior,
+- discrete probability allocation,
+- minimal elasticity.
 
-HDDT often exhibits:
-- lower AUROC than modern boosted ensembles,
-- but materially stronger recall/F1 at default thresholds under severe imbalance.
-
-This suggests HDDT may:
-- allocate minority posterior mass less conservatively,
-- resulting in operationally different deployment behavior.
-
-Bagged HDDT ensembles have proven surprisingly competitive on several datasets.
+Strongest observed example:
+- CART
 
 ---
 
-## 4. Three Emerging Allocation Regimes
+## Broad Allocators
+Characteristics:
+- wider posterior support,
+- smoother threshold response,
+- less catastrophic collapse.
 
-An emerging conceptual framing is:
-
-| Regime | Characteristics | Example Models |
-|---|---|---|
-| Conservative posterior allocators | Excellent ranking, low default recall under imbalance | RF, XGB, LightGBM |
-| Moderate allocators | Better minority allocation at default thresholds | HDDT |
-| Discrete allocators | Threshold-invariant leaf behavior | CART |
-
-This framing is still preliminary but increasingly supported empirically.
+Examples:
+- HDDT
+- Bagged HDDT
 
 ---
 
-# Important Datasets
+# Important Scientific Distinction
 
-The following datasets appear especially informative:
+The project increasingly appears less concerned with:
 
-| Dataset | Importance |
-|---|---|
-| boundary | Extreme threshold collapse |
-| cam | Severe imbalance operational behavior |
-| compustat | Strong divergence between AUROC and recall |
-| oil | Strong synthetic-to-real continuity |
-| satimage | “healthy imbalance” comparison case |
-| sick | Easier operational regime |
-
----
-
-# Important Distinction
-
-The project now appears less concerned with:
-
-> “Which classifier is best?”
+> “Which classifier wins?”
 
 and more concerned with:
 
-> “How do classifiers allocate probability mass under severe imbalance, and what operational consequences follow?”
+> “How do classifiers allocate operational probability mass under severe imbalance?”
 
-This distinction increasingly appears central.
+This distinction now appears central.
 
 ---
 
-# Immediate Next Directions
+# Why This Matters
 
-## Near-term
+In many real systems:
+- fraud detection,
+- intrusion detection,
+- medicine,
+- industrial failure prediction,
 
-- combined cross-dataset reporting,
-- threshold-response visualization,
-- precision/recall vs threshold curves,
-- cross-model operational comparisons,
-- benchmark snapshot preservation,
-- paper outline development.
+deployment decisions occur through:
+- thresholds,
+- resource constraints,
+- operational queues,
+- human review systems.
 
-## Possible later directions
+A classifier with:
+- excellent ranking,
+but:
+- pathological allocation geometry,
 
-- calibration analysis,
-- prediction landscape analysis,
-- OpenML expansion,
-- multiclass imbalance,
-- neural tabular models,
-- probability calibration correction methods.
+may perform poorly operationally despite strong benchmark metrics.
+
+---
+
+# Important Emerging Observation
+
+The strongest models by AUROC are not necessarily:
+- the smoothest,
+- the most operationally controllable,
+- or the safest deployment allocators.
+
+This appears especially true under:
+- extreme skew,
+- compressed minority support,
+- operational threshold constraints.
 
 ---
 
 # Current Strategic Recommendation
 
-Avoid turning the project into:
-- a generic benchmark zoo,
-- or a hyperparameter sweep framework.
+The project should avoid drifting into:
+- generic benchmark expansion,
+- hyperparameter optimization,
+- architecture zoo behavior.
 
 The strongest contribution currently appears to be:
 
-> the distinction between ranking quality and posterior allocation behavior under severe class imbalance.
+> the distinction between ranking quality and operational allocation geometry under severe class imbalance.
 
-That conceptual thread should remain central.
+This conceptual thread should remain primary.

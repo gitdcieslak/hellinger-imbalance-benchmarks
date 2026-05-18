@@ -54,6 +54,20 @@ SEPARATION_METRICS = [
     "ks_statistic",
     "histogram_hellinger_distance",
 ]
+ALLOCATION_METRICS = [
+    "score_mean",
+    "score_std",
+    "score_min",
+    "score_max",
+    "fraction_scores_below_0_001",
+    "fraction_scores_below_0_005",
+    "fraction_scores_below_0_01",
+    "fraction_scores_below_0_05",
+    "fraction_scores_above_0_50",
+    "histogram_entropy",
+    "effective_support_size",
+    "gini_coefficient",
+]
 
 
 def read_jsonl_records(path: str | Path) -> list[dict[str, Any]]:
@@ -373,6 +387,91 @@ def summarize_score_jsonl(
     csv_path = write_summary_csv(summary, csv_output_path)
     markdown_path = write_score_summary_markdown(summary, markdown_output_path)
     return csv_path, markdown_path
+
+
+def allocation_records_to_frame(records: list[dict[str, Any]]) -> pd.DataFrame:
+    """Convert allocation JSONL records to a flat dataframe."""
+
+    rows: list[dict[str, Any]] = []
+    for record in records:
+        row = {
+            "model_id": record["model_id"],
+            "dataset_id": record.get("dataset_id"),
+            "skew_ratio": record.get("skew_ratio"),
+        }
+        row.update({metric: record["metrics"][metric] for metric in ALLOCATION_METRICS})
+        rows.append(row)
+    return pd.DataFrame(rows)
+
+
+def summarize_allocation_records(records: list[dict[str, Any]]) -> pd.DataFrame:
+    """Aggregate allocation concentration records by dataset/skew and model."""
+
+    frame = allocation_records_to_frame(records)
+    group_key = "dataset_id" if frame["dataset_id"].notna().any() else "skew_ratio"
+    grouped = frame.groupby([group_key, "model_id"], as_index=False)[ALLOCATION_METRICS]
+    summary = grouped.agg(["mean", "std"])
+    summary.columns = [
+        "_".join(column).strip("_") if isinstance(column, tuple) else column
+        for column in summary.columns
+    ]
+    std_columns = [f"{metric}_std" for metric in ALLOCATION_METRICS]
+    summary[std_columns] = summary[std_columns].fillna(0.0)
+    run_counts = frame.groupby([group_key, "model_id"]).size().reset_index(name="n_runs")
+    summary = summary.merge(run_counts, on=[group_key, "model_id"], how="left")
+    return summary.sort_values([group_key, "model_id"]).reset_index(drop=True)
+
+
+def allocation_summary_to_markdown(summary: pd.DataFrame) -> str:
+    """Render allocation concentration summary grouped by dataset/skew."""
+
+    group_key = "dataset_id" if "dataset_id" in summary.columns else "skew_ratio"
+    header = "# Allocation Concentration Summary"
+    sections = [header, ""]
+    for group_value, group in summary.groupby(group_key, sort=True):
+        table = _frame_to_markdown(group.drop(columns=[group_key]))
+        sections.extend([f"## {group_key} {group_value}", "", table, ""])
+    return "\n".join(sections).rstrip() + "\n"
+
+
+def write_allocation_summary_markdown(summary: pd.DataFrame, output_path: str | Path) -> Path:
+    """Write allocation concentration markdown summary."""
+
+    path = Path(output_path)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(allocation_summary_to_markdown(summary), encoding="utf-8")
+    return path
+
+
+def threshold_elasticity_summary_to_markdown(summary: pd.DataFrame) -> str:
+    """Render threshold elasticity summary grouped by dataset/skew."""
+
+    group_key = "dataset_id" if "dataset_id" in summary.columns else "skew_ratio"
+    sections = ["# Threshold Elasticity Summary", ""]
+    for group_value, group in summary.groupby(group_key, sort=True):
+        columns = [
+            "model_id",
+            "max_recall_jump",
+            "max_precision_drop",
+            "max_f1_jump",
+            "mean_abs_recall_elasticity",
+            "mean_abs_precision_elasticity",
+            "mean_abs_f1_elasticity",
+            "operational_smoothness_index",
+            "threshold_of_max_recall_jump",
+        ]
+        table = _frame_to_markdown(group[columns])
+        sections.extend([f"## {group_key} {group_value}", "", table, ""])
+    return "\n".join(sections).rstrip() + "\n"
+
+
+def write_threshold_elasticity_summary_markdown(summary: pd.DataFrame, output_path: str | Path) -> Path:
+    """Write threshold elasticity markdown report."""
+
+    path = Path(output_path)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(threshold_elasticity_summary_to_markdown(summary), encoding="utf-8")
+    return path
 
 
 def separation_records_to_frame(records: list[dict[str, Any]]) -> pd.DataFrame:
