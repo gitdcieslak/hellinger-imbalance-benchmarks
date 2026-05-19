@@ -622,3 +622,85 @@ and more like:
 > a study of operational probability allocation behavior under severe class imbalance.
 
 That conceptual transition now feels complete.
+
+# 2026-05-19
+
+## Posterior Occupancy Geometry Begins to Stabilize
+
+The project appears to have crossed an important conceptual threshold.
+
+Initial work focused primarily on:
+- benchmark modernization,
+- HDDT reproduction,
+- threshold-sweep behavior,
+- and operational instability observations.
+
+However, the introduction of:
+- posterior occupancy metrics,
+- threshold reachability curves,
+- ECDF occupancy analysis,
+- and posterior support histograms
+
+has substantially clarified the emerging theory direction.
+
+The work increasingly appears to support the hypothesis that classifier families induce structurally distinct posterior occupancy geometries under severe imbalance.
+
+Several particularly important observations emerged:
+
+### CART
+CART now appears strongly explained by:
+- finite discrete posterior support,
+- extremely small posterior alphabets,
+- and highly concentrated posterior mass.
+
+Operational threshold invariance increasingly appears to emerge directly from posterior support collapse.
+
+Observed:
+- unique_score_count ≈ 2
+- top_5_mass_fraction ≈ 1.0
+
+The ECDF and reachability curves visually reinforce this interpretation through staircase occupancy transitions and piecewise-constant threshold behavior.
+
+### XGBoost
+XGBoost appears to exhibit a fundamentally different failure mode.
+
+Unlike CART:
+- XGBoost produces many unique posterior values,
+- but still exhibits severe operational fragility and threshold collapse.
+
+This suggests:
+- the problem is not posterior discreteness,
+but:
+- compressed minority occupancy accessibility.
+
+Minority posterior mass appears concentrated into low-probability regions that remain operationally inaccessible at realistic thresholds.
+
+This may become one of the paper’s most important findings.
+
+### HDDT / Bagged HDDT
+HDDT-family methods increasingly appear to produce:
+- broader posterior occupancy,
+- smoother threshold accessibility,
+- and less catastrophic operational collapse.
+
+Bagged HDDT especially appears to stabilize occupancy support while preserving broad operational accessibility.
+
+### Reachability Curves
+Threshold reachability curves now appear to be one of the paper’s most important conceptual objects:
+
+R(t) = P( p_hat(x) >= t | y = 1 )
+
+This framing unifies:
+- recall,
+- occupancy survival,
+- operational accessibility,
+- threshold elasticity,
+- and deployment behavior.
+
+The paper increasingly appears less concerned with:
+- “which classifier wins,”
+
+and more concerned with:
+- “how classifier families allocate operationally accessible posterior probability mass under severe imbalance.”
+
+This feels like a major conceptual transition for the project.

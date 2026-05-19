@@ -126,6 +126,21 @@ Examples:
 
 ---
 
+# Mechanistic Occupancy Hypothesis
+
+Emerging evidence suggests that classifier families induce structurally distinct posterior occupancy geometries under severe imbalance.
+
+Observed mechanisms now appear to include:
+
+- discrete posterior support (CART),
+- compressed minority occupancy (XGBoost),
+- broader posterior support (HDDT-family models),
+- stabilized occupancy smoothing (Bagged HDDT).
+
+These occupancy structures appear to persist even after post-hoc calibration correction, suggesting that operational allocation geometry may represent a deeper classifier-family property than calibration quality alone.
+
+---
+
 # Important Scientific Distinction
 
 The project increasingly appears less concerned with:

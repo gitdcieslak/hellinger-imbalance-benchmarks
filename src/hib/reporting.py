@@ -68,6 +68,21 @@ ALLOCATION_METRICS = [
     "effective_support_size",
     "gini_coefficient",
 ]
+OCCUPANCY_METRICS = [
+    "score_mean",
+    "score_std",
+    "score_min",
+    "score_max",
+    "occupancy_entropy",
+    "minority_occupancy_entropy",
+    "majority_occupancy_entropy",
+    "occupied_bin_count",
+    "posterior_sparsity_index",
+    "occupancy_density_ratio",
+    "threshold_occupancy_persistence",
+    "minority_occupancy_compression_ratio",
+    "quantization_score",
+]
 
 
 def read_jsonl_records(path: str | Path) -> list[dict[str, Any]]:
@@ -536,3 +551,56 @@ def summarize_separation_jsonl(
     csv_path = write_summary_csv(summary, csv_output_path)
     markdown_path = write_separation_summary_markdown(summary, markdown_output_path)
     return csv_path, markdown_path
+
+
+def occupancy_records_to_frame(records: list[dict[str, Any]]) -> pd.DataFrame:
+    """Convert occupancy JSONL records to a flat dataframe."""
+
+    rows: list[dict[str, Any]] = []
+    for record in records:
+        row = {
+            "dataset_id": record.get("dataset_id"),
+            "skew_ratio": record.get("skew_ratio"),
+            "model_id": record["model_id"],
+        }
+        row.update({metric: record["metrics"][metric] for metric in OCCUPANCY_METRICS})
+        rows.append(row)
+    return pd.DataFrame(rows)
+
+
+def summarize_occupancy_records(records: list[dict[str, Any]]) -> pd.DataFrame:
+    """Aggregate occupancy records by dataset/skew and model."""
+
+    frame = occupancy_records_to_frame(records)
+    group_key = "dataset_id" if frame["dataset_id"].notna().any() else "skew_ratio"
+    grouped = frame.groupby([group_key, "model_id"], as_index=False)[OCCUPANCY_METRICS]
+    summary = grouped.agg(["mean", "std"])
+    summary.columns = [
+        "_".join(column).strip("_") if isinstance(column, tuple) else column
+        for column in summary.columns
+    ]
+    std_columns = [f"{metric}_std" for metric in OCCUPANCY_METRICS]
+    summary[std_columns] = summary[std_columns].fillna(0.0)
+    run_counts = frame.groupby([group_key, "model_id"]).size().reset_index(name="n_runs")
+    summary = summary.merge(run_counts, on=[group_key, "model_id"], how="left")
+    return summary.sort_values([group_key, "model_id"]).reset_index(drop=True)
+
+
+def occupancy_summary_to_markdown(summary: pd.DataFrame) -> str:
+    """Render occupancy summary grouped by dataset/skew."""
+
+    group_key = "dataset_id" if "dataset_id" in summary.columns else "skew_ratio"
+    sections = ["# Prediction-Space Occupancy Summary", ""]
+    for group_value, group in summary.groupby(group_key, sort=True):
+        table = _frame_to_markdown(group.drop(columns=[group_key]))
+        sections.extend([f"## {group_key} {group_value}", "", table, ""])
+    return "\n".join(sections).rstrip() + "\n"
+
+
+def write_occupancy_summary_markdown(summary: pd.DataFrame, output_path: str | Path) -> Path:
+    """Write occupancy markdown summary."""
+
+    path = Path(output_path)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(occupancy_summary_to_markdown(summary), encoding="utf-8")
+    return path

@@ -16,6 +16,7 @@ import yaml
 
 from hib.arrays import ensure_numpy_array, ensure_numpy_vector
 from hib.allocation import allocation_concentration_metrics
+from hib.occupancy import compute_occupancy_metrics
 from hib.datasets.legacy_loader import load_legacy_hddt_dataset
 from hib.datasets.legacy_registry import LEGACY_HDDT_DATASET_REGISTRY as CURATED_LEGACY_HDDT_DATASET_REGISTRY
 from hib.metrics import evaluate_model
@@ -836,6 +837,85 @@ def run_allocation_concentration_synthetic(config: dict[str, Any]) -> list[dict[
                             "timestamp": datetime.now(timezone.utc).isoformat(),
                         }
                     )
+    return records
+
+
+def run_prediction_space_occupancy_legacy(
+    dataset_ids: list[str],
+    model_ids: list[str],
+    extracted_dir: str | Path = DEFAULT_LEGACY_EXTRACTED_DIR,
+    n_repeats: int = 5,
+    test_size: float = 0.5,
+    split_seed: int = 0,
+    seed: int = 0,
+    model_params: dict[str, dict[str, Any]] | None = None,
+    thresholds: list[float] | None = None,
+) -> list[dict[str, Any]]:
+    """Compute prediction-space occupancy records for curated legacy datasets."""
+
+    unknown_models = sorted(set(model_ids) - set(available_model_ids()))
+    if unknown_models:
+        raise ValueError(f"unknown model ids: {', '.join(unknown_models)}")
+
+    records: list[dict[str, Any]] = []
+    versions = package_versions()
+    extracted = Path(extracted_dir)
+    threshold_values = [0.50, 0.25, 0.10, 0.05, 0.01] if thresholds is None else [float(t) for t in thresholds]
+
+    for dataset_id in dataset_ids:
+        if dataset_id not in CURATED_LEGACY_HDDT_DATASET_REGISTRY:
+            raise ValueError(f"unknown legacy dataset id: {dataset_id}")
+        dataset_entry = CURATED_LEGACY_HDDT_DATASET_REGISTRY[dataset_id]
+        X, y, metadata = load_legacy_hddt_dataset(extracted, dataset_entry)
+        X = ensure_numpy_array(X)
+        y = ensure_numpy_vector(y)
+        split_specs = generate_stratified_repeated_splits(
+            y,
+            n_repeats=int(n_repeats),
+            test_size=float(test_size),
+            random_seed=int(split_seed),
+        )
+
+        for split_spec in split_specs:
+            X_train = ensure_numpy_array(X[split_spec.train_idx])
+            y_train = ensure_numpy_vector(y[split_spec.train_idx])
+            X_test = ensure_numpy_array(X[split_spec.test_idx])
+            y_test = ensure_numpy_vector(y[split_spec.test_idx])
+
+            for model_id in model_ids:
+                try:
+                    model = make_model(model_id, seed=int(seed))
+                except OptionalDependencyUnavailable:
+                    continue
+                model = apply_model_config_params(model, model_id, model_params)
+                model = apply_split_dependent_ensemble_params(model, model_id, X_train)
+                model = apply_split_dependent_model_params(model, model_id, y_train)
+                if not fit_or_skip_model(model, X_train, y_train):
+                    continue
+                y_score = positive_class_scores(model, X_test)
+                occ = compute_occupancy_metrics(y_test, y_score, threshold_values)
+                records.append(
+                    {
+                        "source": "legacy",
+                        "dataset_id": dataset_id,
+                        "source_group": dataset_entry.get("source_group", "unknown"),
+                        "model_id": model_id,
+                        "seed": int(seed),
+                        "repeat_id": split_spec.repeat_id,
+                        "split_id": split_spec.split_id,
+                        "split_seed": split_spec.split_seed,
+                        "train_n": int(y_train.size),
+                        "test_n": int(y_test.size),
+                        "train_pos": int(np.sum(y_train == 1)),
+                        "train_neg": int(np.sum(y_train == 0)),
+                        "test_pos": int(np.sum(y_test == 1)),
+                        "test_neg": int(np.sum(y_test == 0)),
+                        "dataset_metadata": metadata,
+                        "metrics": occ,
+                        "package_versions": versions,
+                        "timestamp": datetime.now(timezone.utc).isoformat(),
+                    }
+                )
     return records
 
 

@@ -169,26 +169,57 @@ Key phenomena:
 
 ---
 
-# 7. Allocation Geometry
+# 7. Posterior Occupancy Geometry
 
-## 7.1 Probability Allocation Concentration
-- entropy
-- support size
-- score compression
+## 7.1 Posterior Occupancy Under Imbalance	
+- define occupancy framing
 
-## 7.2 Prediction-Space Occupancy
-- posterior mass occupancy
-- minority allocation sparsity
-- operational support regions
+## 7.2 Quantized Posterior Support
 
-## 7.3 Operational Elasticity
-- recall elasticity
-- precision elasticity
-- threshold sensitivity
+Decision-tree classifiers under severe imbalance may produce highly discrete posterior output spaces due to finite leaf occupancy and empirical class-frequency estimation.
 
-## 7.4 Allocation Smoothness
-- continuous vs discontinuous threshold response
-- operational regime transitions
+This induces:
+- finite posterior alphabets,
+- threshold-invariant operational behavior,
+- and piecewise-constant threshold trajectories.
+
+We analyze:
+- unique posterior occupancy,
+- posterior support discreteness,
+- and threshold crossing density.
+
+## 7.3 Compressed Minority Occupancy
+
+Boosted ensemble methods frequently exhibit severe minority posterior compression under extreme imbalance.
+
+Despite strong ranking performance:
+- minority posterior mass may occupy narrow low-probability regions,
+- producing operational threshold collapse,
+- high recall elasticity,
+- and abrupt threshold-recovery transitions.
+
+We investigate:
+- minority occupancy concentration,
+- posterior accessibility,
+- and threshold reachability behavior.
+
+## 7.4 Threshold Reachability	
+- operational accessibility
+- Threshold Reachability
+-- \[
+R(t) = P\left(\hat{p}(x) \geq t \mid y = 1\right)
+\]
+-- minority occupancy surviving threshold t.
+- Threshold Elasticity
+-- \[
+E(t) = \left| \frac{dR(t)}{dt} \right|
+\]
+
+## 7.5 Calibration Persistence	
+- geometry vs calibration
+
+## 7.6 Occupancy Regimes	
+- geometric regime synthesis
 
 ---
 
@@ -273,7 +304,6 @@ but because:
 - binary classification only
 - no neural tabular models
 - no temporal sequence modeling
-- no calibration-interaction study yet
 - no full prediction-space occupancy visualization yet
 - fixed threshold schedules
 - limited dataset diversity
