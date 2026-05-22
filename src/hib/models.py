@@ -7,6 +7,7 @@ from importlib import import_module
 from typing import Any
 
 from hellinger_tree import HellingerDecisionTreeClassifier
+from sklearn.neural_network import MLPClassifier
 from sklearn.ensemble import BaggingClassifier, RandomForestClassifier
 from sklearn.tree import DecisionTreeClassifier
 
@@ -187,6 +188,20 @@ def _make_lightgbm_weighted(seed: int) -> Any:
     )
 
 
+def _make_mlp(seed: int) -> MLPClassifier:
+    return MLPClassifier(
+        hidden_layer_sizes=(64, 32),
+        activation="relu",
+        solver="adam",
+        alpha=1e-4,
+        learning_rate_init=1e-3,
+        max_iter=300,
+        early_stopping=True,
+        n_iter_no_change=20,
+        random_state=seed,
+    )
+
+
 MODEL_REGISTRY: dict[str, ModelFactory] = {
     "hddt": _make_hddt,
     "bagged_hddt": _make_bagged_hddt,
@@ -201,6 +216,7 @@ MODEL_REGISTRY: dict[str, ModelFactory] = {
     "lightgbm": _make_lightgbm,
     "lightgbm_unbalanced": _make_lightgbm_unbalanced,
     "lightgbm_weighted": _make_lightgbm_weighted,
+    "mlp": _make_mlp,
 }
 
 

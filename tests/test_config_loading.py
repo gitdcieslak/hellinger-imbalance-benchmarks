@@ -112,3 +112,8 @@ def test_no_duplicate_model_ids_when_merging_smoke_and_class_weighted_configs():
 def test_hddt_ensembles_config_loading_works():
     model_ids = load_model_ids(["configs/models/hddt_ensembles.yaml"])
     assert model_ids == ["hddt_forest"]
+
+
+def test_neural_mlp_model_config_loading_works():
+    model_ids = load_model_ids(["configs/models/neural_mlp_allocation_geometry.yaml"])
+    assert "mlp" in model_ids

@@ -79,3 +79,24 @@ def test_runner_executes_hddt_forest_end_to_end():
 
     assert len(records) == 2
     assert all(record["model_id"] == "hddt_forest" for record in records)
+
+
+def test_runner_executes_mlp_end_to_end():
+    config = {
+        "experiment_id": "test_mlp",
+        "skew_ratios": [10],
+        "seeds": [0],
+        "separation": 1.5,
+        "minority_count": 12,
+        "n_features": 6,
+        "noise": 1.0,
+        "test_size": 0.5,
+        "n_repeats": 1,
+        "split_seed": 5,
+        "models": ["mlp"],
+    }
+
+    records = run_synthetic_suite(config)
+
+    assert len(records) == 1
+    assert records[0]["model_id"] == "mlp"

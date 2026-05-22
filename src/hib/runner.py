@@ -41,6 +41,7 @@ KNOWN_MODEL_FAMILIES = {
     "RandomForest",
     "XGBoost",
     "LightGBM",
+    "MLP",
 }
 
 DEFAULT_CONFIG: dict[str, Any] = {

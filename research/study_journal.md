@@ -704,3 +704,296 @@ and more concerned with:
 - “how classifier families allocate operationally accessible posterior probability mass under severe imbalance.”
 
 This feels like a major conceptual transition for the project.
+
+# 2026-05-22
+
+## Neural MLP Extension Successfully Integrates into Allocation Geometry Framework
+
+Completed the first constrained neural extension experiment using a lightweight MLP baseline integrated directly into the existing operational allocation geometry framework.
+
+Important outcome:
+
+* the framework generalized cleanly to neural learners,
+* without requiring substantial architectural modification,
+* special-case neural logic,
+* or new metric families.
+
+This appears conceptually important.
+
+The existing operational allocation metrics:
+
+* threshold elasticity,
+* occupancy geometry,
+* posterior concentration,
+* reachability behavior,
+* and regime synthesis
+
+all remained meaningful for neural outputs.
+
+This substantially strengthens the emerging belief that:
+
+> operational allocation geometry may represent a model-family-independent analysis framework rather than a tree-specific phenomenon.
+
+---
+
+# MLP Does NOT Behave Like a Broad Allocator
+
+One of the most important findings from the initial neural extension:
+
+MLP did not behave like:
+
+* HDDT,
+* or Bagged HDDT.
+
+Instead, MLP primarily expressed:
+
+> cliff allocator behavior.
+
+This is scientifically important.
+
+Observed:
+
+* strong threshold-collapse behavior,
+* operational fragility under severe imbalance,
+* poor default-threshold accessibility,
+* and large nonlinear recall recovery after threshold relaxation.
+
+Especially notable:
+
+* full default-threshold collapse on:
+
+  * boundary,
+  * compustat,
+* near-collapse on:
+
+  * cam.
+
+At threshold 0.01:
+
+* substantial recall recovery occurred.
+
+This strongly resembles:
+
+* the earlier XGBoost observations,
+  rather than:
+* the broader occupancy behavior observed in Bagged HDDT.
+
+This is an important conceptual reinforcement.
+
+---
+
+# Neural Learners Appear Operationally Analyzable
+
+The most important meta-result may not be MLP performance itself.
+
+The more important result may be:
+
+> neural learners appear analyzable as operational allocation systems.
+
+This is significant because:
+
+* the project initially emerged from tree-based imbalance behavior,
+* but the operational geometry framing now appears portable across model families.
+
+The allocation-regime framework:
+
+* conservative,
+* cliff,
+* broad,
+* quantized
+
+appears capable of describing neural behavior as well.
+
+That substantially increases confidence that:
+
+* the project may be uncovering deeper properties of classifier uncertainty allocation under imbalance.
+
+---
+
+# Calibration Improves Error Metrics But Preserves Regime Identity
+
+One of the strongest conceptual findings so far:
+
+Calibration materially improved:
+
+* ECE,
+* and Brier score,
+
+but:
+
+* did NOT fundamentally alter the inferred operational regime.
+
+MLP remained:
+
+> cliff-like
+
+under:
+
+* raw,
+* Platt,
+* and isotonic calibration.
+
+This appears extremely important.
+
+Possible implication:
+
+> calibration may reparameterize threshold accessibility without fundamentally altering posterior occupancy geometry.
+
+If this continues to hold across:
+
+* additional neural learners,
+* and additional classifier families,
+
+then:
+
+* allocation geometry may represent a deeper classifier-family property than calibration quality alone.
+
+This now feels like one of the most important emerging theoretical directions in the project.
+
+---
+
+# Bagged HDDT Now Appears More Structurally Distinct
+
+The neural results indirectly strengthened the apparent uniqueness of Bagged HDDT.
+
+The original possibility was:
+
+* HDDT-family behavior might simply emerge from:
+
+  * lower-capacity learners,
+  * or weaker ranking quality.
+
+The MLP results weaken this interpretation.
+
+Despite:
+
+* smooth function approximation,
+* dense learned representations,
+* and continuous outputs,
+
+MLP still exhibited:
+
+* occupancy compression,
+* operational cliffs,
+* and threshold fragility.
+
+This increases the plausibility that:
+
+* Bagged HDDT may possess structurally distinct allocation properties,
+  rather than:
+* merely underfit behavior.
+
+This now feels increasingly important.
+
+---
+
+# Emerging Hypothesis: Representation Learning May Encourage Occupancy Compression
+
+A potentially important speculative direction emerged:
+
+Modern neural learners may optimize:
+
+* ranking,
+* separability,
+* and likelihood,
+
+while simultaneously compressing minority posterior occupancy into operationally inaccessible probability regions.
+
+Possible interpretation:
+
+> representation learning itself may encourage conservative posterior allocation under severe imbalance.
+
+This remains highly speculative but now appears plausible enough to investigate further.
+
+---
+
+# Important Conceptual Transition
+
+The project now appears substantially removed from:
+
+* “Does HDDT outperform modern models?”
+
+and increasingly centered on:
+
+> how classifier families allocate operationally accessible posterior probability mass under severe imbalance.
+
+The neural extension appears to reinforce rather than weaken this conceptual transition.
+
+That feels significant.
+
+---
+
+# Important Constraints Going Forward
+
+Need to continue resisting:
+
+* architecture-zoo expansion,
+* hyperparameter wars,
+* benchmark drift,
+* and leaderboard framing.
+
+The strongest signal currently remains:
+
+> operational allocation geometry itself.
+
+Neural learners should continue to be treated primarily as:
+
+* probes into allocation behavior,
+  rather than:
+* competitive benchmark entrants.
+
+---
+
+# Immediate Next Questions
+
+## Second Neural Model
+
+Need to determine whether:
+
+* FT-Transformer,
+* TabNet,
+* or another structured neural learner
+
+exhibits:
+
+* similar cliff behavior,
+* broader occupancy,
+* or an entirely new operational regime.
+
+Only one additional neural architecture should likely be added initially.
+
+---
+
+## Occupancy-Preserving Objectives
+
+Need to investigate whether neural objectives could explicitly encourage:
+
+* broader minority occupancy,
+* smoother threshold reachability,
+* or operationally stable posterior support.
+
+Potential directions:
+
+* occupancy regularization,
+* threshold-aware losses,
+* reachability-aware objectives,
+* or elasticity penalties.
+
+---
+
+## Reachability as a Primary Object
+
+Threshold reachability curves increasingly appear central:
+
+[
+R(t) = P(\hat{p}(x) \ge t \mid y = 1)
+]
+
+This object now appears to unify:
+
+* recall,
+* occupancy accessibility,
+* threshold elasticity,
+* and deployment behavior.
+
+Possibly one of the most important conceptual objects in the entire project.

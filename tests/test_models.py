@@ -4,6 +4,7 @@ import numpy as np
 import pytest
 
 from hib.models import OptionalDependencyUnavailable, available_model_ids, make_model
+from hib.metrics import positive_class_scores
 from hib.runner import apply_split_dependent_model_params, compute_binary_class_weight_ratio
 from hib.synthetic import SyntheticSkewConfig, make_train_test_split
 
@@ -23,6 +24,7 @@ def test_model_registry_instantiates_required_models():
         "xgboost_weighted",
         "lightgbm_unbalanced",
         "lightgbm_weighted",
+        "mlp",
     }
 
     assert required == set(available_model_ids())
@@ -35,6 +37,7 @@ def test_model_registry_instantiates_required_models():
         "random_forest",
         "cart_balanced",
         "random_forest_balanced",
+        "mlp",
     }:
         model = make_model(model_id, seed=0)
         assert hasattr(model, "fit")
@@ -176,3 +179,27 @@ def test_lightgbm_non_constant_probabilities_on_separable_data_when_available():
     assert probabilities.size > 0
     assert probabilities.std() > 0.0
     assert probabilities.min() < probabilities.max()
+
+
+def test_mlp_predict_proba_and_positive_class_scores_are_finite_and_bounded():
+    config = SyntheticSkewConfig(
+        skew_ratio=10,
+        seed=31,
+        separation=2.0,
+        minority_count=30,
+        n_features=6,
+        noise=0.9,
+        test_size=0.5,
+    )
+    X_train, X_test, y_train, _ = make_train_test_split(config)
+    model = make_model("mlp", seed=31)
+    model.fit(X_train, y_train)
+
+    probabilities = model.predict_proba(X_test)[:, 1]
+    scores = positive_class_scores(model, X_test)
+
+    assert probabilities.shape[0] == X_test.shape[0]
+    assert np.isfinite(probabilities).all()
+    assert np.isfinite(scores).all()
+    assert np.all((probabilities >= 0.0) & (probabilities <= 1.0))
+    assert np.all((scores >= 0.0) & (scores <= 1.0))
