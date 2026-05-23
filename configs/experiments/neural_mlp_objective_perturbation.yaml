@@ -1,0 +1,38 @@
+experiment_id: neural_mlp_objective_perturbation
+source: legacy
+datasets:
+  - boundary
+  - cam
+  - compustat
+  - oil
+  - satimage
+n_repeats: 5
+test_size: 0.5
+split_seed: 0
+seed: 0
+thresholds:
+  - 0.50
+  - 0.25
+  - 0.10
+  - 0.05
+  - 0.01
+model_configs:
+  - configs/models/neural_mlp_objective_perturbation.yaml
+artifacts:
+  legacy_benchmark_jsonl: results/neural_mlp_objective_perturbation/legacy_benchmark.jsonl
+  legacy_benchmark_summary_csv: reports/neural_mlp_objective_perturbation/legacy_benchmark_summary.csv
+  legacy_benchmark_summary_md: reports/neural_mlp_objective_perturbation/legacy_benchmark_summary.md
+  threshold_sweep_jsonl: results/neural_mlp_objective_perturbation/legacy_threshold_sweep.jsonl
+  threshold_sweep_summary_csv: reports/neural_mlp_objective_perturbation/legacy_threshold_sweep_summary.csv
+  threshold_sweep_summary_md: reports/neural_mlp_objective_perturbation/legacy_threshold_sweep_summary.md
+  allocation_jsonl: results/neural_mlp_objective_perturbation/allocation_concentration.jsonl
+  allocation_summary_csv: reports/neural_mlp_objective_perturbation/allocation_concentration_summary.csv
+  allocation_summary_md: reports/neural_mlp_objective_perturbation/allocation_concentration_summary.md
+  occupancy_jsonl: results/neural_mlp_objective_perturbation/prediction_space_occupancy.jsonl
+  occupancy_summary_csv: reports/neural_mlp_objective_perturbation/prediction_space_occupancy_summary.csv
+  occupancy_summary_md: reports/neural_mlp_objective_perturbation/prediction_space_occupancy_summary.md
+  calibration_output_dir: reports/neural_mlp_objective_perturbation/calibration_interaction
+  elasticity_summary_csv: reports/neural_mlp_objective_perturbation/threshold_elasticity_summary.csv
+  elasticity_summary_md: reports/neural_mlp_objective_perturbation/threshold_elasticity_summary.md
+  regime_summary_csv: reports/neural_mlp_objective_perturbation/allocation_regime_summary.csv
+  regime_summary_md: reports/neural_mlp_objective_perturbation/allocation_regime_summary.md

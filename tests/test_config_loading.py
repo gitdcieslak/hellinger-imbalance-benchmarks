@@ -117,3 +117,8 @@ def test_hddt_ensembles_config_loading_works():
 def test_neural_mlp_model_config_loading_works():
     model_ids = load_model_ids(["configs/models/neural_mlp_allocation_geometry.yaml"])
     assert "mlp" in model_ids
+
+
+def test_neural_mlp_objective_perturbation_model_config_loading_works():
+    model_ids = load_model_ids(["configs/models/neural_mlp_objective_perturbation.yaml"])
+    assert {"mlp_bce", "mlp_oversampled", "mlp_weighted"}.issubset(set(model_ids))

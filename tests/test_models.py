@@ -25,6 +25,9 @@ def test_model_registry_instantiates_required_models():
         "lightgbm_unbalanced",
         "lightgbm_weighted",
         "mlp",
+        "mlp_bce",
+        "mlp_oversampled",
+        "mlp_weighted",
     }
 
     assert required == set(available_model_ids())
@@ -38,6 +41,9 @@ def test_model_registry_instantiates_required_models():
         "cart_balanced",
         "random_forest_balanced",
         "mlp",
+        "mlp_bce",
+        "mlp_oversampled",
+        "mlp_weighted",
     }:
         model = make_model(model_id, seed=0)
         assert hasattr(model, "fit")
@@ -203,3 +209,47 @@ def test_mlp_predict_proba_and_positive_class_scores_are_finite_and_bounded():
     assert np.isfinite(scores).all()
     assert np.all((probabilities >= 0.0) & (probabilities <= 1.0))
     assert np.all((scores >= 0.0) & (scores <= 1.0))
+
+
+@pytest.mark.parametrize("model_id", ["mlp_bce", "mlp_oversampled", "mlp_weighted"])
+def test_mlp_variants_predict_proba_and_scores_are_finite(model_id):
+    config = SyntheticSkewConfig(
+        skew_ratio=10,
+        seed=37,
+        separation=2.0,
+        minority_count=30,
+        n_features=6,
+        noise=0.9,
+        test_size=0.5,
+    )
+    X_train, X_test, y_train, _ = make_train_test_split(config)
+    model = make_model(model_id, seed=37)
+    model.fit(X_train, y_train)
+    probabilities = model.predict_proba(X_test)[:, 1]
+    scores = positive_class_scores(model, X_test)
+
+    assert probabilities.shape[0] == X_test.shape[0]
+    assert np.isfinite(probabilities).all()
+    assert np.isfinite(scores).all()
+    assert np.all((probabilities >= 0.0) & (probabilities <= 1.0))
+    assert np.all((scores >= 0.0) & (scores <= 1.0))
+
+
+def test_mlp_oversampled_resampling_is_fold_local_and_increases_fit_count():
+    config = SyntheticSkewConfig(
+        skew_ratio=20,
+        seed=41,
+        separation=2.0,
+        minority_count=20,
+        n_features=6,
+        noise=1.0,
+        test_size=0.5,
+    )
+    X_train, _, y_train, _ = make_train_test_split(config)
+    model = make_model("mlp_oversampled", seed=41)
+    model.fit(X_train, y_train)
+
+    assert hasattr(model, "_fit_input_n")
+    assert hasattr(model, "_fit_resampled_n")
+    assert model._fit_input_n == len(y_train)
+    assert model._fit_resampled_n >= model._fit_input_n

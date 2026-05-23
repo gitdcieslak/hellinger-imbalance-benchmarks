@@ -2,13 +2,15 @@
 
 from __future__ import annotations
 
+import inspect
 from collections.abc import Callable
 from importlib import import_module
 from typing import Any
 
+import numpy as np
 from hellinger_tree import HellingerDecisionTreeClassifier
-from sklearn.neural_network import MLPClassifier
 from sklearn.ensemble import BaggingClassifier, RandomForestClassifier
+from sklearn.neural_network import MLPClassifier
 from sklearn.tree import DecisionTreeClassifier
 
 
@@ -202,6 +204,110 @@ def _make_mlp(seed: int) -> MLPClassifier:
     )
 
 
+class _MlpOversampledAdapter:
+    def __init__(self, seed: int) -> None:
+        self._seed = int(seed)
+        self._model = _make_mlp(seed)
+        self._fit_input_n = 0
+        self._fit_resampled_n = 0
+
+    def fit(self, X: np.ndarray, y: np.ndarray) -> "_MlpOversampledAdapter":
+        X_arr = np.asarray(X)
+        y_arr = np.asarray(y)
+        self._fit_input_n = int(y_arr.size)
+        classes, counts = np.unique(y_arr, return_counts=True)
+        if classes.size != 2:
+            self._fit_resampled_n = int(y_arr.size)
+            self._model.fit(X_arr, y_arr)
+            return self
+
+        majority = int(np.max(counts))
+        rng = np.random.default_rng(self._seed)
+        sampled_idx: list[np.ndarray] = []
+        for cls in classes:
+            cls_idx = np.flatnonzero(y_arr == cls)
+            replace = cls_idx.size < majority
+            picked = rng.choice(cls_idx, size=majority, replace=replace)
+            sampled_idx.append(picked)
+        train_idx = np.concatenate(sampled_idx)
+        rng.shuffle(train_idx)
+        self._fit_resampled_n = int(train_idx.size)
+        self._model.fit(X_arr[train_idx], y_arr[train_idx])
+        return self
+
+    def predict(self, X: np.ndarray) -> np.ndarray:
+        return self._model.predict(X)
+
+    def predict_proba(self, X: np.ndarray) -> np.ndarray:
+        return self._model.predict_proba(X)
+
+
+class _MlpWeightedAdapter:
+    def __init__(self, seed: int) -> None:
+        self._seed = int(seed)
+        self._model = _make_mlp(seed)
+        self._uses_sample_weight = False
+        self._fit_input_n = 0
+        self._fit_resampled_n = 0
+
+    def fit(self, X: np.ndarray, y: np.ndarray) -> "_MlpWeightedAdapter":
+        X_arr = np.asarray(X)
+        y_arr = np.asarray(y)
+        self._fit_input_n = int(y_arr.size)
+        self._fit_resampled_n = int(y_arr.size)
+        classes, counts = np.unique(y_arr, return_counts=True)
+        if classes.size != 2:
+            self._model.fit(X_arr, y_arr)
+            return self
+
+        count_map = {int(cls): int(count) for cls, count in zip(classes, counts, strict=False)}
+        n_total = int(y_arr.size)
+        class_weights = {
+            int(cls): n_total / (2.0 * float(count_map[int(cls)]))
+            for cls in classes
+        }
+        sample_weight = np.asarray([class_weights[int(label)] for label in y_arr], dtype=float)
+
+        signature = inspect.signature(self._model.fit)
+        if "sample_weight" in signature.parameters:
+            self._model.fit(X_arr, y_arr, sample_weight=sample_weight)
+            self._uses_sample_weight = True
+            return self
+
+        self._uses_sample_weight = False
+        majority = int(np.max(counts))
+        rng = np.random.default_rng(self._seed)
+        sampled_idx: list[np.ndarray] = []
+        for cls in classes:
+            cls_idx = np.flatnonzero(y_arr == cls)
+            replace = cls_idx.size < majority
+            picked = rng.choice(cls_idx, size=majority, replace=replace)
+            sampled_idx.append(picked)
+        train_idx = np.concatenate(sampled_idx)
+        rng.shuffle(train_idx)
+        self._fit_resampled_n = int(train_idx.size)
+        self._model.fit(X_arr[train_idx], y_arr[train_idx])
+        return self
+
+    def predict(self, X: np.ndarray) -> np.ndarray:
+        return self._model.predict(X)
+
+    def predict_proba(self, X: np.ndarray) -> np.ndarray:
+        return self._model.predict_proba(X)
+
+
+def _make_mlp_bce(seed: int) -> MLPClassifier:
+    return _make_mlp(seed)
+
+
+def _make_mlp_oversampled(seed: int) -> _MlpOversampledAdapter:
+    return _MlpOversampledAdapter(seed)
+
+
+def _make_mlp_weighted(seed: int) -> _MlpWeightedAdapter:
+    return _MlpWeightedAdapter(seed)
+
+
 MODEL_REGISTRY: dict[str, ModelFactory] = {
     "hddt": _make_hddt,
     "bagged_hddt": _make_bagged_hddt,
@@ -217,6 +323,9 @@ MODEL_REGISTRY: dict[str, ModelFactory] = {
     "lightgbm_unbalanced": _make_lightgbm_unbalanced,
     "lightgbm_weighted": _make_lightgbm_weighted,
     "mlp": _make_mlp,
+    "mlp_bce": _make_mlp_bce,
+    "mlp_oversampled": _make_mlp_oversampled,
+    "mlp_weighted": _make_mlp_weighted,
 }
 
 

@@ -997,3 +997,330 @@ This object now appears to unify:
 * and deployment behavior.
 
 Possibly one of the most important conceptual objects in the entire project.
+
+# 2026-05-23
+
+## Objective Perturbation Significantly Alters Neural Allocation Geometry
+
+Completed the first controlled neural objective perturbation study using a fixed MLP architecture under varying imbalance-pressure mechanisms.
+
+This appears to be one of the most important results in the project so far.
+
+The key finding:
+
+> operational allocation geometry is not determined by architecture alone.
+
+This now appears strongly supported.
+
+---
+
+# Controlled MLP Perturbation Study
+
+The experiment held:
+
+* architecture,
+* hidden layers,
+* optimization family,
+* and overall model class
+
+effectively constant while varying:
+
+* imbalance pressure,
+* sampling behavior,
+* and weighting strategy.
+
+Variants examined:
+
+* `mlp_bce`
+* `mlp_oversampled`
+* `mlp_weighted`
+
+Importantly:
+
+* no architecture-zoo expansion occurred,
+* no GPU-heavy infrastructure was required,
+* no custom occupancy-aware loss was introduced,
+* and the existing operational allocation framework remained fully reusable.
+
+This substantially strengthens confidence in the framework itself.
+
+---
+
+# MLP BCE Remains Cliff-Like
+
+The baseline BCE-trained MLP reproduced the previously observed operational cliff behavior.
+
+Observed:
+
+* poor default-threshold accessibility,
+* large recall recovery cliffs,
+* low operational smoothness,
+* and severe threshold sensitivity.
+
+Regime synthesis continued classifying:
+
+> `mlp_bce` as `cliff_allocator`.
+
+This strongly reinforces the earlier observation that:
+
+* standard imbalance training pressure may encourage conservative posterior accessibility.
+
+---
+
+# Oversampling and Weighting Materially Change Geometry
+
+The most important result:
+
+Both:
+
+* `mlp_oversampled`
+* and:
+* `mlp_weighted`
+
+transitioned from:
+
+> `cliff_allocator`
+
+to:
+
+> `smooth_allocator`
+
+under the existing regime synthesis framework.
+
+This is extremely important.
+
+Observed improvements:
+
+* substantially higher default-threshold recall,
+* reduced threshold-collapse severity,
+* improved operational smoothness,
+* reduced maximum recall jumps,
+* and broader effective posterior support.
+
+The most striking implication:
+
+> operational geometry can move substantially under altered imbalance pressure even when architecture remains fixed.
+
+This now appears strongly supported empirically.
+
+---
+
+# Geometry Is Emerging as an Optimization Property
+
+The project now appears to be converging toward a deeper interpretation:
+
+> operational probability accessibility geometry may emerge from the interaction between:
+>
+> * optimization pressure,
+> * imbalance structure,
+> * and representation behavior.
+
+This appears substantially richer than:
+
+* simple architecture comparisons,
+  or:
+* leaderboard benchmarking.
+
+The current evidence increasingly suggests:
+
+* optimization objectives shape operational accessibility structure,
+* not merely ranking quality.
+
+This feels like a major conceptual transition.
+
+---
+
+# Important Observation: Ranking and Geometry Continue to Decouple
+
+One of the strongest recurring patterns:
+
+Changes that improved:
+
+* operational smoothness,
+* accessibility,
+* and threshold behavior
+
+did not always align perfectly with:
+
+* ranking metrics.
+
+This continues reinforcing the distinction between:
+
+* ranking quality,
+* and operational deployability.
+
+That distinction now appears central to the project.
+
+---
+
+# Bagged HDDT Remains Structurally Interesting
+
+The perturbation study unexpectedly strengthened the scientific importance of Bagged HDDT.
+
+Initially, one possible interpretation was:
+
+* broad allocation behavior might simply reflect:
+
+  * weaker learners,
+  * or underfit behavior.
+
+The new MLP perturbation results weaken this interpretation.
+
+Even with:
+
+* continuous outputs,
+* learned representations,
+* and altered imbalance pressure,
+
+MLP variants moved only partially toward:
+
+> broad allocation behavior.
+
+They became:
+
+> smoother,
+
+but did not fully reproduce:
+
+* Bagged-HDDT-like occupancy breadth.
+
+This now increases the plausibility that:
+
+* Bagged HDDT may possess structurally distinct accessibility properties,
+  rather than:
+* merely reflecting optimization weakness.
+
+This feels increasingly important.
+
+---
+
+# Calibration Results Became More Nuanced
+
+The earlier neural study suggested:
+
+* calibration improved ECE/Brier,
+* while preserving regime identity.
+
+The perturbation study complicated this interpretation.
+
+Observed:
+
+* `mlp_bce` remained regime-stable (`cliff_allocator`) after calibration,
+  but:
+* `mlp_oversampled`
+* and:
+* `mlp_weighted`
+
+sometimes transitioned back toward:
+
+> cliff-like interpretations after calibration transforms.
+
+This is scientifically important.
+
+Possible implication:
+
+> calibration may interact nontrivially with occupancy geometry and threshold accessibility.
+
+This weakens the earlier possibility that:
+
+* calibration simply reparameterizes thresholds while preserving geometry completely.
+
+The relationship between:
+
+* calibration,
+* accessibility,
+* and operational morphology
+
+now appears more subtle than initially believed.
+
+---
+
+# Reachability and Geometry Transition Analysis Now Appear Central
+
+The perturbation study suggests that:
+
+* geometry itself is evolving under optimization pressure.
+
+This now motivates a deeper transition analysis focused on:
+
+* reachability curve evolution,
+* occupancy persistence,
+* threshold elasticity trajectories,
+* posterior support expansion/compression,
+* and operational morphology shifts.
+
+The project increasingly appears less concerned with:
+
+* “Which classifier wins?”
+
+and more concerned with:
+
+> “How do optimization pressures shape operational probability accessibility geometry under severe imbalance?”
+
+That now feels like the central scientific question.
+
+---
+
+# Important Strategic Constraint
+
+Need to continue resisting:
+
+* architecture-zoo drift,
+* GPU-scale benchmark escalation,
+* and leaderboard framing.
+
+The strongest signal currently remains:
+
+> operational geometry transition itself.
+
+The simplicity of the perturbation experiments is part of what makes the current findings convincing.
+
+---
+
+# Immediate Next Questions
+
+## Geometry Transition Analysis
+
+Need to explicitly characterize:
+
+* what geometric transformations occur when models move from:
+
+  * cliff_allocator
+    to:
+  * smooth_allocator.
+
+Especially:
+
+* reachability curve shape,
+* occupancy persistence,
+* entropy/support changes,
+* compression reduction,
+* and threshold elasticity evolution.
+
+---
+
+## Focal Loss as a Controlled Follow-Up
+
+Focal loss now appears scientifically justified as:
+
+* a targeted imbalance-pressure perturbation,
+  rather than:
+* a generic neural improvement experiment.
+
+However:
+
+* it should remain tightly constrained,
+* minimally implemented,
+* and interpreted primarily through geometry transition analysis.
+
+---
+
+## Mechanism of Broad Allocation
+
+The most important unresolved question may now be:
+
+> what structural properties produce genuinely broad allocation behavior?
+
+Bagged HDDT remains the strongest unresolved anomaly in the current framework.
+
+That now feels increasingly central.
