@@ -1,0 +1,746 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+  <meta charset="utf-8" />
+  <meta name="generator" content="pandoc" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes" />
+  <title>manuscript_v0_10</title>
+  <style>
+    /* Default styles provided by pandoc.
+    ** See https://pandoc.org/MANUAL.html#variables-for-html for config info.
+    */
+    html {
+      color: #1a1a1a;
+      background-color: #fdfdfd;
+    }
+    body {
+      margin: 0 auto;
+      max-width: 36em;
+      padding-left: 50px;
+      padding-right: 50px;
+      padding-top: 50px;
+      padding-bottom: 50px;
+      hyphens: auto;
+      overflow-wrap: break-word;
+      text-rendering: optimizeLegibility;
+      font-kerning: normal;
+    }
+    @media (max-width: 600px) {
+      body {
+        font-size: 0.9em;
+        padding: 12px;
+      }
+      h1 {
+        font-size: 1.8em;
+      }
+    }
+    @media print {
+      html {
+        background-color: white;
+      }
+      body {
+        background-color: transparent;
+        color: black;
+        font-size: 12pt;
+      }
+      p, h2, h3 {
+        orphans: 3;
+        widows: 3;
+      }
+      h2, h3, h4 {
+        page-break-after: avoid;
+      }
+    }
+    p {
+      margin: 1em 0;
+    }
+    a {
+      color: #1a1a1a;
+    }
+    a:visited {
+      color: #1a1a1a;
+    }
+    img {
+      max-width: 100%;
+    }
+    svg {
+      height: auto;
+      max-width: 100%;
+    }
+    h1, h2, h3, h4, h5, h6 {
+      margin-top: 1.4em;
+    }
+    h5, h6 {
+      font-size: 1em;
+      font-style: italic;
+    }
+    h6 {
+      font-weight: normal;
+    }
+    ol, ul {
+      padding-left: 1.7em;
+      margin-top: 1em;
+    }
+    li > ol, li > ul {
+      margin-top: 0;
+    }
+    blockquote {
+      margin: 1em 0 1em 1.7em;
+      padding-left: 1em;
+      border-left: 2px solid #e6e6e6;
+      color: #606060;
+    }
+    code {
+      white-space: pre-wrap;
+      font-family: Menlo, Monaco, Consolas, 'Lucida Console', monospace;
+      font-size: 85%;
+      margin: 0;
+      hyphens: manual;
+    }
+    pre {
+      margin: 1em 0;
+      overflow: auto;
+    }
+    pre code {
+      padding: 0;
+      overflow: visible;
+      overflow-wrap: normal;
+    }
+    .sourceCode {
+     background-color: transparent;
+     overflow: visible;
+    }
+    hr {
+      border: none;
+      border-top: 1px solid #1a1a1a;
+      height: 1px;
+      margin: 1em 0;
+    }
+    table {
+      margin: 1em 0;
+      border-collapse: collapse;
+      width: 100%;
+      overflow-x: auto;
+      display: block;
+      font-variant-numeric: lining-nums tabular-nums;
+    }
+    table caption {
+      margin-bottom: 0.75em;
+    }
+    tbody {
+      margin-top: 0.5em;
+      border-top: 1px solid #1a1a1a;
+      border-bottom: 1px solid #1a1a1a;
+    }
+    th {
+      border-top: 1px solid #1a1a1a;
+      padding: 0.25em 0.5em 0.25em 0.5em;
+    }
+    td {
+      padding: 0.125em 0.5em 0.25em 0.5em;
+    }
+    header {
+      margin-bottom: 4em;
+      text-align: center;
+    }
+    #TOC li {
+      list-style: none;
+    }
+    #TOC ul {
+      padding-left: 1.3em;
+    }
+    #TOC > ul {
+      padding-left: 0;
+    }
+    #TOC a:not(:hover) {
+      text-decoration: none;
+    }
+    span.smallcaps{font-variant: small-caps;}
+    div.columns{display: flex; gap: min(4vw, 1.5em);}
+    div.column{flex: auto; overflow-x: auto;}
+    div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+    /* The extra [class] is a hack that increases specificity enough to
+       override a similar rule in reveal.js */
+    ul.task-list[class]{list-style: none;}
+    ul.task-list li input[type="checkbox"] {
+      font-size: inherit;
+      width: 0.8em;
+      margin: 0 0.8em 0.2em -1.6em;
+      vertical-align: middle;
+    }
+    .display.math{display: block; text-align: center; margin: 0.5rem auto;}
+  </style>
+</head>
+<body>
+<h1
+id="beyond-auroc-and-calibration-operational-accessibility-trajectories-under-severe-class-imbalance">Beyond
+AUROC and Calibration: Operational Accessibility Trajectories Under
+Severe Class Imbalance</h1>
+<h2 id="abstract">Abstract</h2>
+<p>Severe class imbalance is common in threshold-mediated deployments
+such as triage, fraud review, and sparse-event surveillance, yet
+evaluation is often dominated by static ranking and reliability metrics.
+We analyze reachability trajectories, closely related to
+class-conditional coverage trajectories but used here as an operational
+accessibility object under severe imbalance, to characterize how
+minority access evolves as threshold policy changes. Using this lens,
+family-level evidence shows that AUROC, average precision, ECE, and
+Brier can be partially non-equivalent to threshold-mediated
+accessibility behavior in this setting. We then show that within a fixed
+MLP architecture, objective/sampling perturbations (<code>mlp_bce</code>
+vs <code>mlp_oversampled</code>/<code>mlp_weighted</code>) can move
+accessibility morphology from cliff-like to smoother forms. We also
+observe a calibration interaction: reliability metrics can improve while
+operational smoothness declines and jump intensity increases in this
+constrained severe-imbalance regime. We present these results as an
+empirical + conceptual framing contribution rather than a complete
+theory or universal taxonomy. This manuscript is not a new learner, not
+a complete operational morphology theory, not a universal classifier
+taxonomy, and not a benchmark competition paper.</p>
+<h2 id="introduction">1. Introduction</h2>
+<p>How should we reason about operational accessibility under severe
+class imbalance? In many real systems, decisions are threshold-mediated
+rather than rank-only: teams tighten or relax thresholds to manage
+review load, precision constraints, or policy shifts. In that context,
+the key deployment question is not only whether positives are ranked
+above negatives, but whether minority cases remain accessible as
+threshold policy changes.</p>
+<p>Our empirical program repeatedly surfaced a consistent signal:
+ranking quality does not reliably determine threshold-level
+accessibility in severe-imbalance settings. In our MLP baseline analysis
+over <code>boundary</code>, <code>cam</code>, <code>compustat</code>,
+<code>oil</code>, and <code>satimage</code>, dataset-mean values show
+<code>auroc_mean=0.7068</code> and
+<code>average_precision_mean=0.2410</code>, while
+<code>recall@0.50=0.1346</code> and <code>recall@0.01=0.7867</code>
+(recovery <code>+0.6522</code>) [source:
+<code>reports/neural_mlp_allocation_geometry_summary.md</code>]. On
+several severe datasets in the same run, default-threshold recall
+collapses near zero while low-threshold recovery remains
+substantial.</p>
+<p>This signal is not restricted to neural learners. Under the same
+protocol, recurring accessibility structures appear across CART, HDDT,
+Bagged HDDT, Random Forest, LightGBM, and MLP-family models: some
+families show conservative or quantized accessibility, while others show
+cliff-like or broad recovery profiles. We therefore treat family-level
+observations as a core empirical layer, with neural perturbation results
+used to extend and stress-test the same accessibility framing.</p>
+<p>To study this behavior, we treat threshold-mediated accessibility
+trajectories as operationally relevant analytical objects. We use
+reachability trajectories, elasticity localization, and accessibility
+persistence (defined here as threshold-survival persistence across the
+operational threshold grid) together with operational smoothness to
+describe where accessibility is lost, where it recovers, and how
+controllable threshold policy appears under perturbation.</p>
+<p>Our contributions are:</p>
+<ol type="1">
+<li>We provide empirical evidence that, under severe class imbalance,
+conventional ranking and reliability summaries can underdescribe
+threshold-mediated minority accessibility, including near-neighbor
+ranking cases (for example, Bagged HDDT vs LightGBM) with materially
+different accessibility geometry.</li>
+<li>We use reachability trajectories as an analytical lens for minority
+accessibility under threshold policy movement, emphasizing trajectory
+structure rather than single-threshold endpoints.</li>
+<li>We show this non-equivalence signal across multiple evidence layers:
+model-family contrasts, fixed-architecture neural perturbation
+transitions, and calibration-accessibility interaction.</li>
+<li>We provide operational descriptors (persistence, smoothness, jump
+localization) as practical summarization tools for threshold-policy
+controllability, while treating morphology vocabulary as provisional
+empirical shorthand.</li>
+</ol>
+<h3 id="scope-delimitations">Scope delimitations</h3>
+<p>This manuscript is:</p>
+<ul>
+<li>an empirical + conceptual framing paper,</li>
+<li>focused on severe imbalance and threshold-mediated deployment,</li>
+<li>based on constrained model and dataset slices.</li>
+</ul>
+<p>This manuscript is not:</p>
+<ul>
+<li>a complete operational morphology theory,</li>
+<li>a universal classifier taxonomy,</li>
+<li>a formal topology paper,</li>
+<li>a benchmark leaderboard paper,</li>
+<li>a production-ready objective proposal.</li>
+</ul>
+<h2 id="related-work">2. Related Work</h2>
+<h3 id="severe-class-imbalance-learning">2.1 Severe Class Imbalance
+Learning</h3>
+<p>Severe class imbalance has long been studied through cost-sensitive
+learning, sampling/reweighting strategies, and imbalance-aware tree
+criteria. Foundational work includes cost-sensitive classification
+formulations [CITATION: Elkan 2001], synthetic minority over-sampling
+[CITATION: Chawla et al. 2002], and broad imbalance surveys [CITATION:
+He and Garcia 2009], [CITATION: Krawczyk 2016]. Class-weighting and
+reweighting are now standard components in both classical and neural
+pipelines [CITATION: Buda et al. 2018], [CITATION: Johnson and
+Khoshgoftaar 2019].</p>
+<p>For Hellinger-based trees, the original HDDT line [CITATION: Cieslak
+and Chawla 2008] and later robustness/skew-insensitivity analysis
+[CITATION: Cieslak et al. 2012] motivate inclusion of HDDT-style
+families as strong rare-event baselines in our analysis.</p>
+<p>HDDT was introduced to reduce class-skew sensitivity of conventional
+split criteria by using Hellinger distance at split selection, with
+explicit motivation in rare-event settings and strong empirical
+performance under imbalance [CITATION: Cieslak et al. 2012]. The current
+manuscript does not claim that prior HDDT work studied accessibility
+geometry. Instead, we revisit HDDT-family behavior through an
+operational accessibility lens to evaluate threshold-mediated minority
+access and policy controllability.</p>
+<p>Our manuscript is directly situated in this setting and uses these
+core tools (weighting, oversampling, threshold-based evaluation). We do
+not propose a new learner; we analyze how minority accessibility behaves
+under threshold evolution in deployment-relevant conditions.</p>
+<h3 id="evaluation-under-severe-imbalance">2.2 Evaluation Under Severe
+Imbalance</h3>
+<p>Imbalance evaluation is commonly anchored by ROC/AUROC and PR/AP
+analyses [CITATION: Davis and Goadrich 2006], [CITATION: Saito and
+Rehmsmeier 2015], often supplemented by threshold-specific
+confusion-matrix metrics. Operating-point analysis is well established
+in decision-oriented classification and cost-curve traditions [CITATION:
+Fawcett 2006], [CITATION: Drummond and Holte 2006]. These metrics remain
+valuable and are used throughout.</p>
+<p>Our results do not dispute their usefulness; they suggest these
+summaries can be insufficient on their own for threshold-mediated
+deployment interpretation. In this setting, models with acceptable
+ranking quality can still show default-threshold accessibility collapse,
+with substantial recovery only under threshold relaxation.</p>
+<h3 id="selective-prediction-coverage-and-threshold-analysis">2.3
+Selective Prediction, Coverage, and Threshold Analysis</h3>
+<p>Our closest conceptual neighbors are reject-option classification,
+selective prediction, and risk-coverage analysis [CITATION: Chow 1970],
+[CITATION: El-Yaniv and Wiener 2010], [CITATION: Geifman and El-Yaniv
+2017]. These traditions analyze confidence-thresholded action sets and
+risk/coverage behavior.</p>
+<p>We explicitly acknowledge overlap. Reachability, as used here, is
+closely related to class-conditional coverage/threshold trajectory
+analysis (<code>R(t)=P(\hat p(x)\ge t\mid y=1)</code>). We therefore do
+not claim a wholly new mathematical object. Our emphasis differs in
+operational focus under severe imbalance: minority accessibility
+persistence, elasticity localization, and threshold-policy
+robustness.</p>
+<h3 id="calibration-decision-analysis-and-operational-ml">2.4
+Calibration, Decision Analysis, and Operational ML</h3>
+<p>Calibration literature has established post-hoc methods and
+reliability diagnostics such as Platt scaling, isotonic regression, ECE,
+and Brier score [CITATION: Platt 1999], [CITATION: Zadrozny and Elkan
+2002], [CITATION: Niculescu-Mizil and Caruana 2005], [CITATION: Guo et
+al. 2017]. We rely on these tools, and calibration remains valuable for
+probability reliability.</p>
+<p>Our contribution is not a new calibration method. We study
+calibration-accessibility interaction under severe imbalance, where
+reliability improvements can coexist with less smooth
+threshold-accessibility behavior.</p>
+<p>Decision-theoretic classification and utility-sensitive thresholding
+emphasize threshold choice under asymmetric costs [CITATION: Elkan
+2001], [CITATION: Fawcett 2006]. Operational ML traditions emphasize
+deployment constraints, system maintenance/monitoring risk, and
+human-in-the-loop workflow design in triage/review systems [CITATION:
+Sculley et al. 2015], [CITATION: Breck et al. 2017], [CITATION: Amershi
+et al. 2019]. Our perspective is complementary: instead of optimizing
+only a single operating point, we focus on accessibility evolution as
+thresholds move under workload and risk constraints.</p>
+<h3 id="summary-positioning">2.5 Summary Positioning</h3>
+<p>This manuscript is most closely related to severe-imbalance
+evaluation, selective prediction/coverage analysis, threshold-sensitive
+decision analysis, calibration-for-decision discussions, and operational
+ML deployment thinking. We do not claim a new learner or complete
+theory. Instead, we contribute an empirical and operationally grounded
+synthesis showing that ranking quality, reliability quality, and
+threshold-mediated minority accessibility can be partially
+non-equivalent under severe imbalance.</p>
+<h2 id="operational-accessibility-under-severe-imbalance">3. Operational
+Accessibility Under Severe Imbalance</h2>
+<p>Under severe imbalance, deployment systems are often constrained by
+review capacity, cost asymmetry, and threshold policy. In these
+contexts, operationally relevant performance is not just class ordering
+but accessibility persistence: whether minority cases remain available
+to action as thresholds move.</p>
+<p>This distinction matters because threshold policies are not static in
+practice. Teams tighten or relax thresholds due to queue pressure,
+precision constraints, policy updates, or incident response. If behavior
+is cliff-like, small policy changes can produce disproportionate
+accessibility shifts. If behavior is smoother, policy control is more
+stable.</p>
+<p>We therefore use operational accessibility to refer to
+threshold-conditioned minority access, and treat ranking quality as
+necessary but insufficient for deployment interpretation.</p>
+<p>Potential objection: “is this just threshold tuning?” Our answer is
+no in two senses. First, the object of study is trajectory shape, not
+only an optimized point. Second, models with similar ranking quality can
+produce sharply different accessibility trajectories, implying different
+policy controllability.</p>
+<p>To anchor this framing, we provide a conceptual map from
+ranking/calibration summaries to threshold-mediated reachability and
+resulting accessibility persistence.</p>
+<p>[Figure 0 about here]</p>
+<p><strong>Figure 0:</strong> Operational accessibility lens.</p>
+<h2 id="reachability-and-threshold-accessibility">4. Reachability and
+Threshold Accessibility</h2>
+<p>We define reachability as:</p>
+<p>[ R(t) = P((x) t y=1) ]</p>
+<p>where <code>t</code> is a decision threshold and
+<code>\hat{p}(x)</code> is the model score interpreted on
+<code>[0,1]</code>.</p>
+<p>Intuitively, <code>R(t)</code> answers: what fraction of minority
+instances remains operationally accessible at threshold
+<code>t</code>?</p>
+<p>Recall at a fixed threshold is one point on <code>R(t)</code>.
+Reachability analysis studies trajectory behavior across thresholds,
+including:</p>
+<ul>
+<li>where accessibility loss concentrates,</li>
+<li>how quickly accessibility decays,</li>
+<li>whether transition behavior is smooth or phase-like,</li>
+<li>how stable threshold-policy control is under perturbation.</li>
+</ul>
+<p>This lens is closely related to class-conditional coverage
+trajectories, but we use it here as an operational deployment object
+centered on threshold-survival accessibility persistence, operational
+smoothness, and elasticity localization under severe imbalance.</p>
+<p>Metric semantics used throughout this manuscript are as follows:
+“accessibility persistence” refers to threshold-survival persistence
+(occupancy/reachability survival across the threshold grid), while
+low-score mass concentration (<code>&lt;0.01</code>) is treated as a
+separate secondary descriptor.</p>
+<p>In this project, threshold grid analyses (<code>0.50</code>,
+<code>0.25</code>, <code>0.10</code>, <code>0.05</code>,
+<code>0.01</code>) and interval derivatives reveal patterns that
+single-threshold recall cannot. In transition artifacts, the BCE
+baseline MLP (formally introduced in Section 5 as <code>mlp_bce</code>)
+often concentrates reachability gains in narrow intervals (e.g., strong
+<code>0.50-&gt;0.25</code> jump on <code>boundary</code>; large
+<code>0.05-&gt;0.01</code> jump on <code>compustat</code>), while
+perturbed variants distribute gains more broadly [source:
+<code>results/geometry_transition_analysis/reachability_derivatives.csv</code>].</p>
+<p>To understand threshold-mediated accessibility evolution, we first
+examine aggregate reachability trajectories.</p>
+<p>[Figure 1 about here]</p>
+<p><strong>Figure 1:</strong> Mean reachability transition.</p>
+<p>To evaluate whether the aggregate pattern is stable or
+dataset-specific, we then inspect per-dataset reachability panels.</p>
+<p>[Figure 2 about here]</p>
+<p><strong>Figure 2:</strong> Dataset-level reachability panels.</p>
+<p>Operational implication: same-threshold recall values can conceal
+very different threshold sensitivity structures.</p>
+<p>A useful counterexample is <code>oil</code>, which shows a near-flat
+reachability pattern across thresholds and across MLP variants in
+current panels. This observationally suggests that threshold policy can
+be comparatively inert in some regimes, and that accessibility geometry
+itself is dataset-dependent rather than uniformly high-sensitivity.</p>
+<h2 id="experimental-framework">5. Experimental Framework</h2>
+<p>We use a constrained, reproducible framework built around repeated
+splits, fixed threshold sweeps, and shared metric/reporting
+pathways.</p>
+<h3 id="data-and-protocol">Data and protocol</h3>
+<ul>
+<li>Legacy severe-imbalance datasets emphasized in this paper:
+<code>boundary</code>, <code>cam</code>, <code>compustat</code>,
+<code>oil</code>, <code>satimage</code>.</li>
+<li>Repeated split style follows project legacy protocol (5 repeated
+splits used in current reports).</li>
+<li>Operational thresholds: <code>0.50</code>, <code>0.25</code>,
+<code>0.10</code>, <code>0.05</code>, <code>0.01</code>.</li>
+</ul>
+<h3 id="model-slices-used-in-manuscript-argument">Model slices used in
+manuscript argument</h3>
+<ul>
+<li>Baseline family comparators: CART, HDDT variants, RandomForest,
+XGBoost, LightGBM.</li>
+<li>The implementation identifier <code>hddt_forest</code> refers to the
+Bagged HDDT model throughout the manuscript.</li>
+<li>HDDT-family models were included because they were specifically
+designed for skew-insensitive learning under severe imbalance and
+therefore provide a natural comparison point for accessibility-oriented
+evaluation.</li>
+<li>Neural extension: MLP baseline (<code>mlp</code>).</li>
+<li>Fixed-architecture perturbation: <code>mlp_bce</code>,
+<code>mlp_oversampled</code>, <code>mlp_weighted</code>.</li>
+</ul>
+<h3 id="analysis-artifact-families">Analysis artifact families</h3>
+<ul>
+<li>threshold sweep summaries,</li>
+<li>elasticity summaries,</li>
+<li>allocation concentration summaries,</li>
+<li>occupancy summaries,</li>
+<li>calibration interaction summaries,</li>
+<li>recurring-pattern synthesis outputs.</li>
+</ul>
+<p>This is intentionally not a broad architecture benchmark. No new
+deep-learning stack, neural architecture zoo, or hyperparameter sweep
+campaign is required for the claims developed here.</p>
+<h2 id="accessibility-trajectory-observations">6. Accessibility
+Trajectory Observations</h2>
+<p>The first empirical layer is ranking-accessibility divergence under
+threshold evolution.</p>
+<p>From the MLP baseline report, dataset-mean ranking quality is
+moderate (<code>auroc_mean=0.7068</code>,
+<code>average_precision_mean=0.2410</code>), but default-threshold
+accessibility is low (<code>recall@0.50=0.1346</code>) with strong
+recovery under relaxation (<code>recall@0.01=0.7867</code>) [source:
+<code>reports/neural_mlp_allocation_geometry_summary.md</code>]. At
+dataset level, severe collapse cases appear
+(<code>boundary=0.0000</code>, <code>compustat=0.0000</code> at
+<code>0.50</code>) with large recovery under lower thresholds.</p>
+<p>These observations are consistent with earlier model-family findings:
+high AUROC/AP can coexist with near-zero minority accessibility at
+operational defaults.</p>
+<p>To ground the non-equivalence claim with concrete anchors, we next
+present representative threshold-collapse and recovery values.</p>
+<p>[Table 1 about here]</p>
+<p><strong>Table 1:</strong> Ranking vs accessibility anchors.</p>
+<p>To establish that accessibility morphology appears before neural
+perturbation analysis, we next summarize family-level operational
+behavior under the same protocol.</p>
+<p>[Table A about here]</p>
+<p><strong>Table A (v2):</strong> Allocator family summary with
+threshold-survival persistence.</p>
+<p><strong>Running Example: Similar Ranking, Different Accessibility
+(Bagged HDDT vs LightGBM).</strong> Bagged HDDT and LightGBM are
+near-neighbors on ranking quality (<code>AUROC 0.8389</code> vs
+<code>0.8479</code>; <code>AP 0.3434</code> vs <code>0.3462</code>), but
+they diverge on accessibility geometry. Bagged HDDT shows much higher
+recovery (<code>0.9024</code> vs <code>0.5485</code>) and jump intensity
+(<code>0.6100</code> vs <code>0.2218</code>), with lower smoothness
+(<code>0.1741</code> vs <code>0.2624</code>). Persistence is also higher
+for Bagged HDDT (<code>0.5397</code> vs <code>0.4413</code>), with
+stability analyses indicating strong directional robustness under
+current resampling and a smaller, qualified persistence-strength
+interpretation versus some comparators. This anchor illustrates the
+central point: similar ranking summaries do not imply similar
+threshold-policy controllability.</p>
+<p>To probe cliff-versus-broad separation directly, we inspect
+jump-persistence geometry as the primary regime map in the main
+text.</p>
+<p>[Figure 7 about here]</p>
+<p><strong>Figure 7:</strong> Accessibility regime map (max jump vs
+threshold-survival persistence).</p>
+<p>Complementary regime views (smoothness vs persistence and recovery vs
+persistence) are consistent with this pattern and are recommended for
+appendix placement in external-review packages.</p>
+<p>Potential objection: “are these isolated examples?” We mitigate that
+concern by repeated-split summaries and multi-dataset consistency in
+severe subsets, while treating generalization as bounded.</p>
+<h3 id="stability-of-accessibility-geometry">Stability of Accessibility
+Geometry</h3>
+<p>We performed a dataset-resampling stability analysis using bootstrap
+(<code>n=10000</code>, seed <code>7</code>) and leave-one-dataset-out
+sensitivity on the severe benchmark slice (<code>boundary</code>,
+<code>cam</code>, <code>compustat</code>, <code>oil</code>,
+<code>satimage</code>) [source:
+<code>reports/neural_mlp/bagged_hddt_stability_summary.md</code>]. For
+Bagged HDDT relative to HDDT and LightGBM, recovery uplift and max-jump
+uplift remain stable under current resampling. The lower-smoothness
+profile is also directionally stable under current resampling.
+Threshold-survival persistence uplift is positive but smaller against
+HDDT (<code>+0.0388</code> mean delta, qualified) and stronger against
+LightGBM (<code>+0.0985</code> mean delta).</p>
+<p>These results support describing the Bagged HDDT accessibility
+profile as an empirically stable phenomenon under current resampling
+rather than a single-dataset artifact, while keeping
+persistence-strength claims conservative.</p>
+<h2 id="recurring-morphology-patterns-provisional">7. Recurring
+Morphology Patterns (Provisional)</h2>
+<p>After trajectory evidence is established, recurring empirical
+patterns become useful shorthand. We use descriptors such as quantized,
+cliff-like, smooth, broad, and conservative to summarize recurring
+behavior; we do not treat these as formal classes.</p>
+<p>In baseline analyses, CART often aligns with quantized behavior
+(minimal threshold response), XGBoost is consistently cliff-like in
+current evidence, LightGBM appears conservative in the cited runs, and
+HDDT/Bagged HDDT often align with broader accessibility patterns. For
+Bagged HDDT specifically, this should be read as an empirically stable
+phenomenon under current resampling rather than an isolated anomaly.
+These labels remain provisional empirical organization.</p>
+<p>To localize where threshold sensitivity concentrates, we summarize
+interval-level elasticity patterns.</p>
+<p>[Figure 3 about here]</p>
+<p><strong>Figure 3:</strong> Elasticity interval concentration heatmap
+used as recurring-pattern evidence rather than taxonomy proof.</p>
+<p>Reviewer-facing caveat: these recurring patterns are empirical
+shorthand, not formal ontology, and their expression is threshold-grid
+dependent.</p>
+<h2 id="neural-perturbation-and-morphology-transition">8. Neural
+Perturbation and Morphology Transition</h2>
+<p>This section provides a key inferential pivot: with architecture held
+fixed, imbalance-pressure perturbation changes accessibility
+morphology.</p>
+<p>From the perturbation summary (dataset means):</p>
+<ul>
+<li><code>mlp_bce</code>: <code>AUROC=0.7068</code>,
+<code>AP=0.2410</code>, <code>recall@0.50=0.1346</code>,
+<code>recall@0.01=0.7867</code>,
+<code>operational_smoothness=0.4178</code>,
+<code>max_recall_jump=0.4061</code>, recurring pattern
+<code>cliff_allocator</code>.</li>
+<li><code>mlp_oversampled</code>: <code>AUROC=0.8351</code>,
+<code>AP=0.2989</code>, <code>recall@0.50=0.4973</code>,
+<code>recall@0.01=0.7041</code>,
+<code>operational_smoothness=0.5391</code>,
+<code>max_recall_jump=0.0678</code>, recurring pattern
+<code>smooth_allocator</code>.</li>
+<li><code>mlp_weighted</code>: <code>AUROC=0.7732</code>,
+<code>AP=0.2658</code>, <code>recall@0.50=0.5789</code>,
+<code>recall@0.01=0.8506</code>,
+<code>operational_smoothness=0.6080</code>,
+<code>max_recall_jump=0.1783</code>, recurring pattern
+<code>smooth_allocator</code>.</li>
+</ul>
+<p>These shifts are consistent with imbalance-pressure sensitivity and
+support the claim that operational accessibility is not
+architecture-only.</p>
+<p>To interpret mechanism-level structure, we next contrast support
+breadth with occupancy persistence.</p>
+<p>[Figure 4 about here]</p>
+<p><strong>Figure 4:</strong> Support vs persistence scatter.</p>
+<p>Interpretive nuance from transition analysis: operational smoothness
+is not reducible to support breadth alone. <code>mlp_weighted</code>
+broadens support more strongly, but <code>mlp_oversampled</code> also
+smooths trajectories without equivalent support expansion. This is
+consistent with threshold-morphology redistribution as a primary
+mechanism.</p>
+<p>Potential objection: “does oversampling merely shift thresholds?”
+Current interval-derivative evidence suggests a stronger interpretation
+than pure translation: dominant jump intervals shift across variants,
+cliff behavior narrows in some settings rather than moving uniformly,
+accessibility gains redistribute across threshold bands, and elasticity
+concentration becomes less localized. This pattern is consistent with
+morphology change, not only threshold offset.</p>
+<h2 id="calibration-vs-operational-accessibility">9. Calibration vs
+Operational Accessibility</h2>
+<p>Practical implication: reliability and accessibility are distinct
+operational axes. In threshold-mediated deployment, teams can improve
+reliability summaries while unintentionally increasing threshold
+sensitivity and reducing accessibility controllability.</p>
+<p>This section consolidates that finding by linking calibration
+improvements to accessibility-geometry shifts.</p>
+<p>Across MLP perturbation variants, calibration summaries indicate
+ECE/Brier improvements, while transition deltas show negative smoothness
+shifts and positive jump shifts on average [source:
+<code>results/geometry_transition_analysis/calibration_transition_model_means.csv</code>].
+In recurring-pattern persistence artifacts, <code>mlp_oversampled</code>
+and <code>mlp_weighted</code> can appear smooth in raw form but
+cliff-like after calibration transforms [source:
+<code>reports/neural_mlp_objective_perturbation/calibration_interaction/regime_persistence_table.csv</code>].</p>
+<p>Before reading Figure 5, the expected pattern is: reliability
+improves, smoothness declines, jump intensity rises, and practical
+threshold sensitivity worsens in the same constrained setting.</p>
+<p>Reliability and accessibility appear to be partially non-equivalent
+operational axes in this severe-imbalance setting. Calibration remains
+valuable for probability reliability; the point is that reliability
+gains do not guarantee preservation of accessibility persistence or
+operational smoothness.</p>
+<p>To make this interaction explicit, we next examine calibration
+geometry deltas.</p>
+<p>[Figure 5 about here]</p>
+<p><strong>Figure 5:</strong> Calibration geometry deltas.</p>
+<p>Potential objection: “is this just calibration pathology in one
+setup?” We treat this as bounded evidence requiring replication across
+calibrators and data regimes, not a universal anti-calibration
+claim.</p>
+<h2 id="toward-operational-morphology">10. Toward Operational
+Morphology</h2>
+<p>Current evidence supports four points. First, operational
+accessibility trajectories deserve direct analysis under severe
+imbalance. Second, recurring empirical patterns can summarize behavior
+when treated as provisional shorthand. Third, fixed-architecture
+perturbation results suggest imbalance-pressure mechanisms can
+materially alter behavior. Fourth, calibration-quality improvements can
+coexist with accessibility degradation.</p>
+<p>Taken together, these findings support the central non-equivalence
+thesis: ranking quality and calibration quality are useful but
+insufficient to characterize threshold-mediated minority accessibility
+behavior in deployment-like severe-imbalance settings.</p>
+<p>The stability analysis suggests that these effects are not driven by
+any single dataset in the current benchmark collection. At the same
+time, additional datasets are needed to test external validity beyond
+this constrained severe-imbalance slice.</p>
+<p>Why should deployment teams care? In queue-managed review systems and
+human-in-the-loop triage, threshold policy is often a control knob. If
+accessibility behavior is cliff-like, small threshold moves can trigger
+large changes in minority access and workload composition. If behavior
+is smoother and persistence is higher, teams gain more stable control
+under policy adjustments. A trajectory-aware view therefore improves
+operational risk interpretation even when ranking and reliability
+summaries look acceptable.</p>
+<p>We present operational morphology as an emerging framing perspective,
+not a complete formal theory. The intent is to improve deployment
+interpretability, sharpen hypothesis generation, and structure follow-up
+studies without overclaiming.</p>
+<h2 id="limitations">11. Limitations</h2>
+<p>This draft has clear limitations.</p>
+<ol type="1">
+<li><strong>Dataset scope:</strong> evidence comes from a constrained
+severe-imbalance legacy slice; external validity is unproven.</li>
+<li><strong>Threshold grid dependence:</strong> analyses use a fixed
+threshold set; finer grids may alter localization details.</li>
+<li><strong>Terminology overlap risk:</strong> reachability partially
+overlaps with selective prediction/class-conditional coverage
+traditions.</li>
+<li><strong>Provisional labels:</strong> recurring-pattern labels are
+heuristic shorthand, not formal ontology.</li>
+<li><strong>Neural scope:</strong> only sklearn-style MLP baseline and
+perturbations are included.</li>
+<li><strong>Mechanism uncertainty:</strong> bagged HDDT broad behavior
+is empirically visible but mechanistically unresolved.</li>
+<li><strong>Calibration interaction uncertainty:</strong> observed
+reliability-smoothness divergence may vary by calibrator/data
+scale.</li>
+<li><strong>No formal theory claims:</strong> the manuscript does not
+provide complete theoretical characterization or causal proof.</li>
+</ol>
+<p>Accordingly, we do not claim universal behavior, complete morphology
+characterization, or definitive causal decomposition.</p>
+<h2 id="future-work">12. Future Work</h2>
+<p>We prioritize bounded extensions aligned to current evidence
+strength.</p>
+<ol type="1">
+<li><strong>Bagged HDDT mechanism disambiguation:</strong> separate
+effects of Hellinger splitting, bagging stabilization, and
+feature/subsample structure using explicit vote-dispersion diagnostics,
+bagging-effect decomposition, and ensemble accessibility geometry
+analysis.</li>
+<li><strong>Calibration-morphology decomposition:</strong> characterize
+when reliability correction re-steepens accessibility and when it does
+not.</li>
+<li><strong>Reachability-aware objective exploration
+(cautious):</strong> investigate whether trajectory-aware training
+pressure can improve operational controllability without overfitting
+threshold grids.</li>
+<li><strong>Cross-domain replication:</strong> test whether trajectory
+non-equivalence patterns hold in additional imbalance domains.</li>
+</ol>
+<p>These are hypothesis-generating directions, not validated
+solutions.</p>
+<h2 id="conclusion">13. Conclusion</h2>
+<p>In threshold-mediated severe-imbalance settings such as those studied
+here, models with similar ranking and reliability summaries can still
+behave very differently in threshold-mediated minority accessibility.
+Current evidence therefore suggests that static AUROC/AP and calibration
+metrics can underdescribe trajectory behavior that is operationally
+consequential. Reachability trajectories, elasticity localization,
+accessibility persistence, and operational smoothness provide a
+practical lens for this analysis.</p>
+<p>Empirically, fixed-architecture MLP perturbations
+(<code>mlp_bce</code> vs
+<code>mlp_oversampled</code>/<code>mlp_weighted</code>) show
+cliff-to-smoother recurring-pattern transitions, supporting the view
+that accessibility morphology is sensitive to imbalance-pressure
+mechanisms rather than architecture alone. Calibration results further
+indicate that reliability gains can coexist with degraded accessibility
+smoothness in this setting, reinforcing that reliability and
+accessibility are partially non-equivalent operational axes.</p>
+<p>This trajectory lens is closely related to class-conditional coverage
+analysis but emphasizes operational accessibility persistence and
+smoothness under threshold policy change. We present this work as an
+empirical + conceptual framing contribution, not a new learner, not a
+complete operational morphology theory, not a universal classifier
+taxonomy, and not a universal anti-calibration claim.</p>
+<p>A natural next step is targeted replication and mechanism
+disambiguation across broader datasets, calibrators, and model families
+to determine when these recurring patterns persist and when they
+break.</p>
+</body>
+</html>

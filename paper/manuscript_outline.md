@@ -1,241 +1,433 @@
 # Working Titles
 
-- Operational Accessibility Under Severe Class Imbalance: An Empirical and Conceptual Morphology Framing
-- Ranking Is Not Accessibility: Operational Morphology of Imbalanced Classifiers
-- Threshold-Mediated Accessibility Morphology Under Severe Class Imbalance
+- Reachability Under Severe Class Imbalance: An Empirical + Conceptual Framing of Operational Accessibility
+- Beyond AUROC and Calibration: Threshold-Mediated Accessibility Trajectories in Imbalanced Classification
+- Operational Accessibility Trajectories Under Severe Imbalance: Evidence, Patterns, and Calibration Tensions
 
 # One-Paragraph Paper Thesis
 
-Current evidence suggests that under severe class imbalance, ranking quality, calibration quality, and operational accessibility are partially non-equivalent. We observe repeatable threshold-collapse and reachability-morphology differences across classifier families and within a fixed MLP architecture under objective/sampling perturbations. We frame these observations as an empirical + conceptual operational morphology program, provide a provisional regime vocabulary, and show calibration can improve reliability while re-steepening operational accessibility.
+Current evidence suggests that under severe class imbalance, ranking quality, calibration quality, and operational accessibility are partially non-equivalent. We observe that threshold-mediated reachability trajectories reveal operational failure modes that static metrics can obscure; we further observe recurring trajectory patterns and fixed-architecture MLP morphology transitions under objective/sampling perturbation. We treat the regime vocabulary as provisional empirical shorthand, not final theory, and position the paper as an empirical + conceptual framing document.
 
 # Abstract Skeleton
 
-- **Context:** Severe imbalance systems are often deployed with threshold-mediated action policies.
-- **Problem:** AUROC/AP and calibration alone can underdescribe deployment accessibility.
-- **Approach:** Repeated-split legacy experiments with threshold sweeps, occupancy, elasticity, regime synthesis, and calibration interaction analyses.
-- **Key observations:**
-  - ranking vs accessibility non-equivalence,
-  - distinct allocation regimes,
-  - MLP `cliff -> smooth` transition under oversampling/weighting,
-  - calibration-reliability gains with occasional morphology re-steepening.
-- **Contribution type:** empirical + conceptual framing, not complete theory.
-- **Implication:** motivates cautious development of reachability-aware operational analysis and objectives.
+- **Problem framing:** Severe imbalance deployments are threshold-mediated; static ranking metrics can miss accessibility dynamics.
+- **Primary analytical object:** minority reachability trajectory `R(t)=P(score>=t|y=1)` and its threshold elasticity structure.
+- **Empirical basis:** repeated-split legacy dataset analyses, trajectory summaries, occupancy/accessibility metrics, neural perturbation transitions, calibration interaction.
+- **Core observations:**
+  - ranking/accessibility non-equivalence,
+  - cliff vs smooth trajectory differences,
+  - fixed-architecture MLP `cliff -> smooth` shifts under imbalance-pressure perturbation,
+  - calibration reliability gains that can coincide with accessibility re-steepening.
+- **Contribution posture:** empirical + conceptual framing; provisional taxonomy; no complete theory claim.
+
+# Central Narrative Spine
+
+1. Ranking metrics can obscure threshold-mediated accessibility behavior.
+2. Reachability trajectories make accessibility evolution visible.
+3. Recurring morphology patterns appear empirically, but labels are provisional.
+4. Fixed-architecture neural perturbations show optimization/imbalance-pressure sensitivity.
+5. Calibration can improve ECE/Brier while worsening trajectory smoothness.
+6. Operational accessibility appears partially independent from both ranking and calibration quality.
+
+# Explicit Non-Claims
+
+- We do **not** claim a complete operational morphology theory.
+- We do **not** claim a universal classifier taxonomy.
+- We do **not** claim all boosted models behave identically (audit-supported distinction: XGBoost vs LightGBM).
+- We do **not** claim a resolved causal mechanism for Bagged HDDT broad behavior.
+- We do **not** claim a production-ready reachability-aware objective.
+- We do **not** position this manuscript as a leaderboard benchmark or SOTA claim.
+
+# Structural Reconsideration: Reachability-Centered Option
+
+## Option A — Reachability-Centered Structure
+
+Proposed flow:
+
+1. Introduction
+2. Operational Accessibility Under Severe Imbalance
+3. Reachability and Threshold Accessibility
+4. Experimental Framework
+5. Accessibility Trajectory Observations
+6. Recurring Morphology Patterns (provisional)
+7. Neural Perturbation and Morphology Transition
+8. Calibration vs Operational Accessibility
+9. Toward Operational Morphology (framing synthesis)
+10. Limitations
+11. Future Work
+
+**Advantages:**
+- Aligns with strongest audited claim (reachability trajectory centrality).
+- Reduces reviewer risk that paper reads as model-comparison benchmark.
+- Places calibration interaction as a core, not peripheral, empirical finding.
+
+**Risks:**
+- Could appear concept-heavy if trajectory definitions are not tied quickly to concrete results.
+- Requires careful de-emphasis of regime labels to avoid ontology framing.
+
+**Rationale:**
+- Adopt Option A. It best matches claim-strength calibration from `research/claim_audit_report.md` and the revised claim inventory.
+
+---
 
 # 1. Introduction
 
 ## Section 1 — Introduction
 
-**Purpose:** State core mismatch between ranking success and deployable accessibility under severe imbalance.
+**Purpose:** Establish ranking/accessibility mismatch and position the paper as empirical + conceptual framing.
 
-**Primary claims:** Claims 1, 2, 16.
+**Primary claims:** 1, 2, 16.
 
-**Evidence / figures:** Threshold-collapse examples; summary table anchors from `reports/neural_mlp_allocation_geometry_summary.md`.
+**Evidence basis:**
+- `reports/neural_mlp_allocation_geometry_summary.md`
+- `research/study_journal.md`
 
-**Key language to use:** “current evidence suggests,” “we observe,” “we do not claim universality.”
+**Conceptual role:** Open the paper with operational question, not model-family contest.
 
-**Caveats:** Dataset family limited; threshold policy fixed.
+**Reviewer attack surface:**
+- “Is this just benchmark rhetoric?”
 
-**TODOs:** Add concise motivation example from one severe dataset panel.
+**Scope limitations:**
+- Explicitly state: not a complete theory; severe-imbalance legacy scope.
 
-# 2. Background and Motivation
+**Key figures/tables:**
+- Primary table: compact ranking vs accessibility anchor (recall@0.50 vs recall@0.01).
 
-## Section 2 — Background and Motivation
+**Critical language constraints:**
+- Use “current evidence suggests,” “we observe,” “we do not claim universality.”
 
-**Purpose:** Position work against leaderboard framing and define threshold-mediated deployment lens.
+**Open risks / TODOs:**
+- TODO: add 2-3 concrete numeric anchors early (including MLP collapse/recovery example).
 
-**Primary claims:** Claims 1, 2, 15, 16.
+# 2. Operational Accessibility Under Severe Imbalance
 
-**Evidence / figures:** Study-journal trajectory; framework motivation excerpts.
+## Section 2 — Operational Accessibility Under Severe Imbalance
 
-**Key language to use:** “operational accessibility allocation systems.”
+**Purpose:** Define deployment context and explain why threshold-mediated analysis is necessary.
 
-**Caveats:** Avoid overformalization of terminology.
+**Primary claims:** 1, 2, 16.
 
-**TODOs:** Add concise related-work matrix: ranking/calibration vs operational trajectory focus.
+**Evidence basis:**
+- `research/operational_morphology_framework.md`
+- `research/terminology.md`
 
-# 3. Operational Accessibility and Reachability
+**Conceptual role:** Create shared conceptual ground before methods.
 
-## Section 3 — Operational Accessibility and Reachability
+**Reviewer attack surface:**
+- “Is this just threshold tuning?”
 
-**Purpose:** Define reachability and explain why trajectory metrics are required.
+**Scope limitations:**
+- Clarify: threshold analysis is a deployment lens, not post-hoc metric fishing.
 
-**Primary claims:** Claims 3, 14.
+**Key figures/tables:**
+- Optional conceptual schematic (appendix if needed).
 
-**Evidence / figures:** `reports/geometry_transition_analysis/plots/reachability_transition_mean.png`; derivative table.
+**Critical language constraints:**
+- Avoid abstract topology language.
 
-**Key language to use:** “recall is a point on a curve, not the curve.”
+**Open risks / TODOs:**
+- TODO: include short practical deployment examples (triage/queue systems) without over-expanding domain claims.
 
-**Caveats:** Reachability depends on threshold grid.
+# 3. Reachability and Threshold Accessibility
 
-**TODOs:** Add formal notation box for `R(t)` and interval elasticity.
+## Section 3 — Reachability and Threshold Accessibility
+
+**Purpose:** Elevate reachability as primary organizing analytical object.
+
+**Primary claims:** 3, 14.
+
+**Evidence basis:**
+- `results/geometry_transition_analysis/reachability_curves.csv`
+- `results/geometry_transition_analysis/reachability_derivatives.csv`
+- `research/operational_morphology_framework.md`
+
+**Conceptual role:** Distinguish trajectory from single-point recall and anchor later sections.
+
+**Reviewer attack surface:**
+- “Isn’t reachability just recall?”
+
+**Scope limitations:**
+- Grid-dependent thresholds and discrete interval derivatives.
+
+**Key figures/tables:**
+- `reports/geometry_transition_analysis/plots/reachability_transition_mean.png` (primary)
+- `reports/geometry_transition_analysis/plots/reachability_transition_by_dataset.png` (primary)
+
+**Critical language constraints:**
+- Explicitly state: recall is one point on `R(t)`, not trajectory structure.
+
+**Open risks / TODOs:**
+- TODO: add concise notation box with `R(t)` and interval elasticity.
 
 # 4. Experimental Framework
 
 ## Section 4 — Experimental Framework
 
-**Purpose:** Document protocol and reproducibility boundaries.
+**Purpose:** Provide reproducible protocol and comparability constraints.
 
-**Primary claims:** Claims 8, 15, 16.
+**Primary claims:** 8, 15, 16.
 
-**Evidence / figures:** Config and report artifacts for legacy runs, perturbation, transition analysis.
+**Evidence basis:**
+- experiment/config/report artifacts across baseline, perturbation, and transition analyses.
 
-**Key language to use:** “constrained model set,” “fixed architecture perturbation.”
+**Conceptual role:** Ensure claims are interpreted as protocol-bound empirical observations.
 
-**Caveats:** Legacy datasets only; no architecture zoo.
+**Reviewer attack surface:**
+- “Is this secretly architecture benchmarking?”
 
-**TODOs:** Add compact methods table (datasets, models, thresholds, split protocol).
+**Scope limitations:**
+- Constrained datasets, constrained thresholds, constrained model families.
 
-# 5. Empirical Observation: Ranking Does Not Ensure Accessibility
+**Key figures/tables:**
+- Methods table: datasets, thresholds, splits, model IDs.
 
-## Section 5 — Ranking Does Not Ensure Accessibility
+**Critical language constraints:**
+- Avoid “comprehensive benchmark” wording.
 
-**Purpose:** Demonstrate ranking-accessibility divergence with numeric anchors.
+**Open risks / TODOs:**
+- TODO: include explicit note that no new training framework or architecture zoo is used.
 
-**Primary claims:** Claims 1, 2.
+# 5. Accessibility Trajectory Observations
 
-**Evidence / figures:** `reports/neural_mlp_allocation_geometry_summary.md`; threshold plots from `reports/neural_mlp/`.
+## Section 5 — Accessibility Trajectory Observations
 
-**Key language to use:** “can obscure,” “operationally fragile at default threshold.”
+**Purpose:** Empirically show ranking/accessibility divergence via trajectory outcomes.
 
-**Caveats:** Threshold default context may vary by domain.
+**Primary claims:** 1, 2, 3.
 
-**TODOs:** Include one table with AUROC/AP + recall@0.50 + recall@0.01 across selected models.
+**Evidence basis:**
+- threshold summary outputs in `reports/neural_mlp/` and perturbation reports.
 
-# 6. Allocation Regimes Under Severe Imbalance
+**Conceptual role:** Convert abstract non-equivalence into concrete threshold-mediated evidence.
 
-## Section 6 — Allocation Regimes Under Severe Imbalance
+**Reviewer attack surface:**
+- “Is this just cherry-picked thresholds?”
 
-**Purpose:** Introduce provisional regime taxonomy and family-level patterns.
+**Scope limitations:**
+- Threshold set fixed; not continuous optimization.
 
-**Primary claims:** Claims 4, 5, 6, 7, 15.
+**Key figures/tables:**
+- Primary: recall-vs-threshold panels
+- Supporting: PR trajectory plots
 
-**Evidence / figures:** allocation regime summaries and scatter plots from `reports/neural_mlp/plots/regimes/` and perturbation comparators.
+**Critical language constraints:**
+- Emphasize trajectory evolution, not model winner claims.
 
-**Key language to use:** “provisional empirical taxonomy.”
+**Open risks / TODOs:**
+- TODO: include severe-dataset and contrast-dataset pair (`boundary` + `satimage`).
 
-**Caveats:** Label boundaries are heuristic.
+# 6. Recurring Morphology Patterns (Provisional)
 
-**TODOs:** Add reviewer note addressing “Are regime labels arbitrary?”
+## Section 6 — Recurring Morphology Patterns (Provisional)
 
-# 7. Neural Extension: MLPs as Operational Allocators
+**Purpose:** Present recurring empirical patterns as shorthand, de-emphasizing taxonomy finality.
 
-## Section 7 — Neural Extension: MLPs as Operational Allocators
+**Primary claims:** 4, 5, 6, 7, 15.
 
-**Purpose:** Show MLP integration without changing metric pipeline.
+**Evidence basis:**
+- allocation regime summaries, threshold elasticity summaries, occupancy summaries.
 
-**Primary claims:** Claims 8, 9.
+**Conceptual role:** Provide interpretable pattern language after trajectory evidence.
 
-**Evidence / figures:** `reports/neural_mlp_allocation_geometry_summary.md`.
+**Reviewer attack surface:**
+- “Are regime labels arbitrary?”
 
-**Key language to use:** “MLP is analyzable in the same operational geometry framework.”
+**Scope limitations:**
+- Labels are heuristic and protocol-dependent.
 
-**Caveats:** Single architecture baseline.
+**Key figures/tables:**
+- Secondary narrative figure: regime scatter plot
+- Supporting table: regime metrics by model
 
-**TODOs:** Add short appendix note on implementation constraints (sklearn-only).
+**Critical language constraints:**
+- Use “empirically recurring,” “provisional,” “shorthand.”
 
-# 8. Objective Perturbation and Morphology Transitions
+**Open risks / TODOs:**
+- TODO: include explicit paragraph that regime labels are not ontological classes.
 
-## Section 8 — Objective Perturbation and Morphology Transitions
+# 7. Neural Perturbation and Morphology Transition
 
-**Purpose:** Isolate imbalance-pressure effects under fixed architecture.
+## Section 7 — Neural Perturbation and Morphology Transition
 
-**Primary claims:** Claims 10, 11, 12.
+**Purpose:** Show architecture-fixed morphology shifts under imbalance-pressure perturbation.
 
-**Evidence / figures:**
+**Primary claims:** 8, 9, 10, 11, 12.
+
+**Evidence basis:**
 - `reports/neural_mlp_objective_perturbation_summary.md`
 - `reports/geometry_transition_analysis_summary.md`
-- figure guide plots (reachability, elasticity heatmap, support vs persistence)
+- `results/geometry_transition_analysis/geometry_transition_model_means.csv`
 
-**Key language to use:** “fixed architecture, varying imbalance pressure.”
+**Conceptual role:** Provide strongest argument that morphology is not architecture-only.
 
-**Caveats:** Limited perturbation family (BCE/oversampled/weighted only).
+**Reviewer attack surface:**
+- “Does oversampling merely shift thresholds?”
 
-**TODOs:** Include compact transition table with anchored numbers:
-- `mlp_bce` `smoothness=0.4178`, `max_jump=0.4061`
-- `mlp_oversampled` `smoothness=0.5391`, `max_jump=0.0678`
-- `mlp_weighted` `smoothness=0.6080`, `max_jump=0.1783`
+**Scope limitations:**
+- Only BCE/oversampling/weighting variants in sklearn MLP path.
 
-# 9. Calibration vs Operational Morphology
+**Key figures/tables:**
+- Primary: reachability-by-dataset panels
+- Primary: elasticity interval heatmap
+- Primary: support vs persistence scatter
+- Table: compact MLP transition anchors (`smoothness`, `max_jump`, `recall@0.50`, `recall@0.01`)
 
-## Section 9 — Calibration vs Operational Morphology
+**Critical language constraints:**
+- Say “appears consistent with optimization/imbalance-pressure sensitivity.”
 
-**Purpose:** Clarify reliability vs accessibility non-equivalence.
+**Open risks / TODOs:**
+- TODO: ensure table includes uncertainty notes and not just means.
 
-**Primary claims:** Claims 13, 14.
+# 8. Calibration vs Operational Accessibility (Consolidated)
 
-**Evidence / figures:**
+## Section 8 — Calibration vs Operational Accessibility (Consolidated)
+
+**Purpose:** Consolidate claims 13 and 14 into one integrated empirical section.
+
+**Primary claims:** 13, 14.
+
+**Evidence basis:**
 - `results/geometry_transition_analysis/calibration_transition_model_means.csv`
-- `reports/geometry_transition_analysis/plots/calibration_geometry_deltas.png`
-- regime persistence table in perturbation calibration outputs
+- `reports/neural_mlp_objective_perturbation/calibration_interaction/regime_persistence_table.csv`
+- calibration summary tables in perturbation outputs
 
-**Key language to use:** “calibration-reliability gains can coexist with accessibility re-steepening.”
+**Conceptual role:** Elevate calibration interaction as one of the strongest paper results.
 
-**Caveats:** Calibrator-dependent behavior.
+**Reviewer attack surface:**
+- “Is this just calibration pathology?”
 
-**TODOs:** Add focused objection-response box: “Is this just calibration failure?”
+**Scope limitations:**
+- Calibrator and split-size dependence; no universal anti-calibration claim.
 
-# 10. Discussion: Toward Operational Morphology
+**Key figures/tables:**
+- Primary: `reports/geometry_transition_analysis/plots/calibration_geometry_deltas.png`
+- Supporting: raw vs calibrated regime persistence table
 
-## Section 10 — Discussion
+**Critical language constraints:**
+- Distinguish two layers explicitly:
+  - reliability improvements (ECE/Brier)
+  - operational trajectory degradation (smoothness/jump)
 
-**Purpose:** Consolidate empirical narrative and conceptual framing contributions.
+**Open risks / TODOs:**
+- TODO: add concise “calibration tradeoff” textbox for reviewer clarity.
 
-**Primary claims:** Claims 11, 12, 15, 16.
+# 9. Toward Operational Morphology (Framing Synthesis)
 
-**Evidence / figures:** Synthesis table and figure guide narrative order.
+## Section 9 — Toward Operational Morphology (Framing Synthesis)
 
-**Key language to use:** “jointly emergent,” “we treat as provisional.”
+**Purpose:** Synthesize empirical findings into a bounded conceptual framing.
 
-**Caveats:** Avoid complete-theory framing.
+**Primary claims:** 11, 12, 15, 16.
 
-**TODOs:** Add explicit paragraph on why this is not a benchmark paper.
+**Evidence basis:**
+- cross-section synthesis of trajectory + perturbation + calibration findings.
 
-# 11. Limitations
+**Conceptual role:** Articulate what is now supported and what remains provisional.
 
-## Section 11 — Limitations
+**Reviewer attack surface:**
+- “Is the framework overclaiming?”
 
-**Purpose:** Make boundaries explicit.
+**Scope limitations:**
+- Not a complete morphology theory; not universal classifier map.
 
-**Primary claims:** Claims 15, 16.
+**Key figures/tables:**
+- Conceptual summary table mapping evidence -> interpretation -> uncertainty.
 
-**Evidence / figures:** Scope documentation from configs and reports.
+**Critical language constraints:**
+- Use “current evidence suggests,” “we treat as provisional.”
 
-**Key language to use:** “we do not claim,” “current evidence is constrained by.”
+**Open risks / TODOs:**
+- TODO: include explicit bridge paragraph to limitations to prevent overread.
 
-**Caveats:** Dataset scope, threshold grid, heuristic taxonomy, limited neural families.
+# 10. Limitations
 
-**TODOs:** Add checklist-style limitations for reviewer clarity.
+## Section 10 — Limitations
 
-# 12. Future Work
+**Purpose:** Make inferential and scope boundaries explicit in manuscript body.
 
-## Section 12 — Future Work
+**Primary claims:** 15, 16.
 
-**Purpose:** Present bounded next steps without scope drift.
+**Evidence basis:**
+- Protocol constraints and audit notes.
 
-**Primary claims:** Claims 17, 18.
+**Conceptual role:** Reduce reviewer attack surface by preemptive delimitation.
 
-**Evidence / figures:** Study journal unresolved Bagged HDDT mechanism; perturbation transition signals.
+**Reviewer attack surface:**
+- “Does this generalize beyond these datasets?”
 
-**Key language to use:** “motivates,” “hypothesis-generating,” “cautious expansion.”
+**Scope limitations:**
+- legacy dataset family, fixed threshold grid, heuristic regime inference, limited neural family.
 
-**Caveats:** Risk of architecture-zoo and objective overfitting.
+**Key figures/tables:**
+- None primary; checklist table recommended.
 
-**TODOs:** Prioritize:
-1. Bagged HDDT mechanism analysis
-2. calibrated-vs-raw morphology decomposition
-3. cautiously scoped reachability-aware objective study
+**Critical language constraints:**
+- Explicit non-claim language.
+
+**Open risks / TODOs:**
+- TODO: include paragraph on adjacent-worktree evidence path consistency from audit.
+
+# 11. Future Work
+
+## Section 11 — Future Work
+
+**Purpose:** Provide constrained next steps consistent with evidence strength.
+
+**Primary claims:** 17, 18.
+
+**Evidence basis:**
+- unresolved Bagged HDDT mechanism notes
+- perturbation and calibration interaction results
+
+**Conceptual role:** Preserve momentum without scope drift.
+
+**Reviewer attack surface:**
+- “Why not move directly to architecture zoo?”
+
+**Scope limitations:**
+- Future work remains hypothesis-generating.
+
+**Key figures/tables:**
+- Optional roadmap table only.
+
+**Critical language constraints:**
+- “motivates cautious follow-up,” not “next definitive step.”
+
+**Open risks / TODOs:**
+- TODO priority order:
+1. Bagged HDDT mechanism disambiguation
+2. Raw-vs-calibrated morphology decomposition
+3. Controlled reachability-aware objective exploration
 
 ---
 
-# Reviewer Objection Integration Plan
+# Primary vs Secondary Narrative Figures
 
-- **“Isn’t reachability just recall?”** Address in Section 3 with trajectory/derivative distinction.
-- **“Isn’t this just threshold tuning?”** Address in Sections 5 and 8 via morphology concentration and regime movement evidence.
-- **“Is this just calibration failure?”** Address in Section 9 with ECE/Brier gains plus smoothness decline evidence.
-- **“Are regime labels arbitrary?”** Address in Section 6 and Limitations as provisional empirical taxonomy.
-- **“Is this dataset-specific?”** Address with dataset panels and explicit scope boundary language.
-- **“Does this generalize beyond tree models?”** Address via MLP extension and fixed-architecture perturbation evidence.
-- **“Does oversampling merely shift thresholds?”** Address via interval elasticity redistribution and jump reduction.
-- **“Is the framework overclaiming?”** Address via Section 10/11 with explicit non-theory positioning.
-- **“Why not just a benchmark paper?”** Address in Intro/Discussion: emphasis is operational morphology, not SOTA ranking.
-- **“Where does Bagged HDDT fit mechanistically?”** Address as unresolved core reference in Future Work.
+**Primary narrative figures (main text):**
+- `reports/geometry_transition_analysis/plots/reachability_transition_mean.png`
+- `reports/geometry_transition_analysis/plots/reachability_transition_by_dataset.png`
+- `reports/geometry_transition_analysis/plots/elasticity_interval_heatmap.png`
+- `reports/geometry_transition_analysis/plots/calibration_geometry_deltas.png`
+- MLP perturbation comparison table (from `reports/neural_mlp_objective_perturbation_summary.md` anchors)
+
+**Secondary/supporting figures (main text if space; otherwise appendix):**
+- `reports/geometry_transition_analysis/plots/support_vs_persistence.png`
+- regime scatter summaries
+- occupancy/ECDF supporting panels
+
+**Appendix candidates:**
+- expanded regime tables
+- full dataset-by-dataset threshold/trajectory panels
+- auxiliary occupancy and calibration plots.
+
+---
+
+# Reviewer-Simulation Integration by Theme
+
+- **Reachability vs recall objection:** handled in Section 3 via trajectory and derivative evidence.
+- **Threshold tuning objection:** handled in Sections 5 and 7 via morphology concentration and transition redistribution.
+- **Regime arbitrariness objection:** handled in Section 6 + Section 10 as provisional shorthand.
+- **Calibration pathology objection:** handled in Section 8 by jointly presenting reliability gains and morphology costs.
+- **Dataset specificity objection:** handled in Sections 5, 7, 10 with dataset-panel heterogeneity and explicit scope limits.
+- **Benchmark-paper objection:** handled in Sections 1, 2, 9 with narrative spine and non-claims.
+- **Bagged HDDT mechanism objection:** handled in Sections 6 and 11 as unresolved but empirically relevant reference.
