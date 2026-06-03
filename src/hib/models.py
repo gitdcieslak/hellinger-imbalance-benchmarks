@@ -204,6 +204,94 @@ def _make_mlp(seed: int) -> MLPClassifier:
     )
 
 
+def _feature_dropout_augmented(
+    X: np.ndarray,
+    y: np.ndarray,
+    dropout_rate: float,
+    seed: int,
+    n_augments: int = 3,
+) -> tuple[np.ndarray, np.ndarray]:
+    if dropout_rate <= 0.0:
+        return X, y
+    if dropout_rate >= 1.0:
+        raise ValueError("dropout_rate must be less than 1")
+
+    rng = np.random.default_rng(seed)
+    keep_probability = 1.0 - float(dropout_rate)
+    X_parts = [X]
+    y_parts = [y]
+    for _ in range(int(n_augments)):
+        mask = rng.binomial(1, keep_probability, size=X.shape).astype(float)
+        X_parts.append((X * mask) / keep_probability)
+        y_parts.append(y)
+    return np.vstack(X_parts), np.concatenate(y_parts)
+
+
+class _MlpDropoutAdapter:
+    def __init__(self, seed: int, dropout_rate: float, weighted: bool = False) -> None:
+        self._seed = int(seed)
+        self._dropout_rate = float(dropout_rate)
+        self._weighted = bool(weighted)
+        self._model = _make_mlp(seed)
+        self._fit_input_n = 0
+        self._fit_resampled_n = 0
+        self._uses_sample_weight = False
+
+    def fit(self, X: np.ndarray, y: np.ndarray) -> "_MlpDropoutAdapter":
+        X_arr = np.asarray(X)
+        y_arr = np.asarray(y)
+        self._fit_input_n = int(y_arr.size)
+        X_fit, y_fit = _feature_dropout_augmented(
+            X_arr,
+            y_arr,
+            dropout_rate=self._dropout_rate,
+            seed=self._seed,
+        )
+        self._fit_resampled_n = int(y_fit.size)
+        if not self._weighted:
+            self._model.fit(X_fit, y_fit)
+            return self
+
+        classes, counts = np.unique(y_fit, return_counts=True)
+        if classes.size != 2:
+            self._model.fit(X_fit, y_fit)
+            return self
+
+        count_map = {int(cls): int(count) for cls, count in zip(classes, counts, strict=False)}
+        n_total = int(y_fit.size)
+        class_weights = {
+            int(cls): n_total / (2.0 * float(count_map[int(cls)]))
+            for cls in classes
+        }
+        sample_weight = np.asarray([class_weights[int(label)] for label in y_fit], dtype=float)
+        signature = inspect.signature(self._model.fit)
+        if "sample_weight" in signature.parameters:
+            self._model.fit(X_fit, y_fit, sample_weight=sample_weight)
+            self._uses_sample_weight = True
+            return self
+
+        self._uses_sample_weight = False
+        majority = int(np.max(counts))
+        rng = np.random.default_rng(self._seed)
+        sampled_idx: list[np.ndarray] = []
+        for cls in classes:
+            cls_idx = np.flatnonzero(y_fit == cls)
+            replace = cls_idx.size < majority
+            picked = rng.choice(cls_idx, size=majority, replace=replace)
+            sampled_idx.append(picked)
+        train_idx = np.concatenate(sampled_idx)
+        rng.shuffle(train_idx)
+        self._fit_resampled_n = int(train_idx.size)
+        self._model.fit(X_fit[train_idx], y_fit[train_idx])
+        return self
+
+    def predict(self, X: np.ndarray) -> np.ndarray:
+        return self._model.predict(X)
+
+    def predict_proba(self, X: np.ndarray) -> np.ndarray:
+        return self._model.predict_proba(X)
+
+
 class _MlpOversampledAdapter:
     def __init__(self, seed: int) -> None:
         self._seed = int(seed)
@@ -308,6 +396,22 @@ def _make_mlp_weighted(seed: int) -> _MlpWeightedAdapter:
     return _MlpWeightedAdapter(seed)
 
 
+def _make_mlp_bce_dropout_0_1(seed: int) -> _MlpDropoutAdapter:
+    return _MlpDropoutAdapter(seed, dropout_rate=0.1)
+
+
+def _make_mlp_bce_dropout_0_3(seed: int) -> _MlpDropoutAdapter:
+    return _MlpDropoutAdapter(seed, dropout_rate=0.3)
+
+
+def _make_mlp_weighted_bce_dropout_0_1(seed: int) -> _MlpDropoutAdapter:
+    return _MlpDropoutAdapter(seed, dropout_rate=0.1, weighted=True)
+
+
+def _make_mlp_weighted_bce_dropout_0_3(seed: int) -> _MlpDropoutAdapter:
+    return _MlpDropoutAdapter(seed, dropout_rate=0.3, weighted=True)
+
+
 MODEL_REGISTRY: dict[str, ModelFactory] = {
     "hddt": _make_hddt,
     "bagged_hddt": _make_bagged_hddt,
@@ -324,8 +428,12 @@ MODEL_REGISTRY: dict[str, ModelFactory] = {
     "lightgbm_weighted": _make_lightgbm_weighted,
     "mlp": _make_mlp,
     "mlp_bce": _make_mlp_bce,
+    "mlp_bce_dropout_0_1": _make_mlp_bce_dropout_0_1,
+    "mlp_bce_dropout_0_3": _make_mlp_bce_dropout_0_3,
     "mlp_oversampled": _make_mlp_oversampled,
     "mlp_weighted": _make_mlp_weighted,
+    "mlp_weighted_bce_dropout_0_1": _make_mlp_weighted_bce_dropout_0_1,
+    "mlp_weighted_bce_dropout_0_3": _make_mlp_weighted_bce_dropout_0_3,
 }
 
 

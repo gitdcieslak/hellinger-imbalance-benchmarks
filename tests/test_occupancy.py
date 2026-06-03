@@ -15,6 +15,64 @@ def test_occupancy_metrics_basic_properties():
     assert len(metrics["threshold_occupancy"]) == 5
 
 
+def test_survival_shape_metrics_smooth_loss_has_low_cliffiness():
+    y = np.array([1] * 8 + [0] * 8)
+    s_pos = np.array([0.81, 0.81, 0.61, 0.61, 0.41, 0.41, 0.21, 0.21])
+    s_neg = np.array([0.01] * 8)
+    s = np.concatenate([s_pos, s_neg])
+    thresholds = [0.2, 0.4, 0.6, 0.8]
+
+    metrics = compute_occupancy_metrics(y, s, thresholds=thresholds)
+
+    assert metrics["minority_survival_max_drop"] == 0.25
+    assert np.isclose(metrics["minority_survival_cliffiness"], 1.0 / 3.0)
+    assert np.isclose(metrics["minority_survival_effective_drop_count"], 3.0)
+
+
+def test_survival_shape_metrics_one_step_cliff_has_high_cliffiness():
+    y = np.array([1] * 8 + [0] * 8)
+    s_pos = np.array([0.79] * 8)
+    s_neg = np.array([0.01] * 8)
+    s = np.concatenate([s_pos, s_neg])
+    thresholds = [0.2, 0.4, 0.6, 0.8]
+
+    metrics = compute_occupancy_metrics(y, s, thresholds=thresholds)
+
+    assert metrics["minority_survival_max_drop"] == 1.0
+    assert metrics["minority_survival_cliffiness"] == 1.0
+    assert metrics["minority_survival_drop_entropy"] == 0.0
+    assert metrics["minority_survival_effective_drop_count"] == 1.0
+
+
+def test_survival_shape_metrics_constant_survival_handles_zero_drop():
+    y = np.array([1] * 8 + [0] * 8)
+    s_pos = np.array([0.95] * 8)
+    s_neg = np.array([0.01] * 8)
+    s = np.concatenate([s_pos, s_neg])
+    thresholds = [0.1, 0.2, 0.3]
+
+    metrics = compute_occupancy_metrics(y, s, thresholds=thresholds)
+
+    assert metrics["minority_survival_total_variation"] == 0.0
+    assert metrics["minority_survival_max_drop"] == 0.0
+    assert metrics["minority_survival_drop_entropy"] == 0.0
+    assert metrics["minority_survival_effective_drop_count"] == 0.0
+    assert metrics["minority_survival_cliffiness"] == 0.0
+
+
+def test_survival_shape_metrics_sort_thresholds_before_drop_calculation():
+    y = np.array([1] * 8 + [0] * 8)
+    s_pos = np.array([0.81, 0.81, 0.61, 0.61, 0.41, 0.41, 0.21, 0.21])
+    s_neg = np.array([0.01] * 8)
+    s = np.concatenate([s_pos, s_neg])
+    thresholds = [0.8, 0.2, 0.6, 0.4]
+
+    metrics = compute_occupancy_metrics(y, s, thresholds=thresholds)
+
+    assert metrics["minority_survival_max_drop"] == 0.25
+    assert np.isclose(metrics["minority_survival_effective_drop_count"], 3.0)
+
+
 def test_occupancy_runner_and_summary_and_plots(monkeypatch, tmp_path):
     extracted = tmp_path / "extracted"
     path = extracted / "tiny.data"

@@ -26,8 +26,12 @@ def test_model_registry_instantiates_required_models():
         "lightgbm_weighted",
         "mlp",
         "mlp_bce",
+        "mlp_bce_dropout_0_1",
+        "mlp_bce_dropout_0_3",
         "mlp_oversampled",
         "mlp_weighted",
+        "mlp_weighted_bce_dropout_0_1",
+        "mlp_weighted_bce_dropout_0_3",
     }
 
     assert required == set(available_model_ids())
@@ -40,10 +44,14 @@ def test_model_registry_instantiates_required_models():
         "random_forest",
         "cart_balanced",
         "random_forest_balanced",
-        "mlp",
-        "mlp_bce",
-        "mlp_oversampled",
-        "mlp_weighted",
+            "mlp",
+            "mlp_bce",
+            "mlp_bce_dropout_0_1",
+            "mlp_bce_dropout_0_3",
+            "mlp_oversampled",
+            "mlp_weighted",
+            "mlp_weighted_bce_dropout_0_1",
+            "mlp_weighted_bce_dropout_0_3",
     }:
         model = make_model(model_id, seed=0)
         assert hasattr(model, "fit")
@@ -211,7 +219,18 @@ def test_mlp_predict_proba_and_positive_class_scores_are_finite_and_bounded():
     assert np.all((scores >= 0.0) & (scores <= 1.0))
 
 
-@pytest.mark.parametrize("model_id", ["mlp_bce", "mlp_oversampled", "mlp_weighted"])
+@pytest.mark.parametrize(
+    "model_id",
+    [
+        "mlp_bce",
+        "mlp_bce_dropout_0_1",
+        "mlp_bce_dropout_0_3",
+        "mlp_oversampled",
+        "mlp_weighted",
+        "mlp_weighted_bce_dropout_0_1",
+        "mlp_weighted_bce_dropout_0_3",
+    ],
+)
 def test_mlp_variants_predict_proba_and_scores_are_finite(model_id):
     config = SyntheticSkewConfig(
         skew_ratio=10,

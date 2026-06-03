@@ -84,6 +84,43 @@ def compute_occupancy_metrics(
         pos_survival.append(pos_above)
 
     threshold_occupancy_persistence = float(np.mean(pos_survival))
+
+    # Backward-compatible persistence based on mean positive survival.
+    # minority_survival_auc uses trapezoidal integration over sorted thresholds.
+    sorted_threshold_order = np.argsort(np.asarray(thresholds, dtype=float))
+    sorted_thresholds = np.asarray([thresholds[idx] for idx in sorted_threshold_order], dtype=float)
+    sorted_survival = np.asarray([pos_survival[idx] for idx in sorted_threshold_order], dtype=float)
+    if sorted_thresholds.size <= 1:
+        minority_survival_auc = threshold_occupancy_persistence
+    else:
+        interval_width = float(sorted_thresholds[-1] - sorted_thresholds[0])
+        if interval_width <= 0.0:
+            minority_survival_auc = threshold_occupancy_persistence
+        else:
+            auc_raw = float(np.trapezoid(sorted_survival, sorted_thresholds))
+            minority_survival_auc = auc_raw / interval_width
+
+    if sorted_survival.size <= 1:
+        drops = np.asarray([], dtype=float)
+    else:
+        drops = np.maximum(0.0, sorted_survival[:-1] - sorted_survival[1:])
+    total_drop = float(np.sum(drops))
+    max_drop = float(np.max(drops)) if drops.size else 0.0
+    total_variation = (
+        float(np.sum(np.abs(np.diff(sorted_survival)))) if sorted_survival.size > 1 else 0.0
+    )
+
+    if total_drop > 0.0:
+        drop_probs = drops / total_drop
+        drop_probs = drop_probs[drop_probs > 0.0]
+        drop_entropy = float(-np.sum(drop_probs * np.log(drop_probs)))
+        effective_drop_count = float(np.exp(drop_entropy))
+        cliffiness = float(max_drop / total_drop)
+    else:
+        drop_entropy = 0.0
+        effective_drop_count = 0.0
+        cliffiness = 0.0
+
     occupancy_density_ratio = float(pos_entropy / max(1e-9, neg_entropy))
 
     return {
@@ -98,6 +135,12 @@ def compute_occupancy_metrics(
         "posterior_sparsity_index": posterior_sparsity_index,
         "occupancy_density_ratio": occupancy_density_ratio,
         "threshold_occupancy_persistence": threshold_occupancy_persistence,
+        "minority_survival_auc": float(minority_survival_auc),
+        "minority_survival_max_drop": max_drop,
+        "minority_survival_total_variation": total_variation,
+        "minority_survival_drop_entropy": drop_entropy,
+        "minority_survival_effective_drop_count": effective_drop_count,
+        "minority_survival_cliffiness": cliffiness,
         "minority_occupancy_compression_ratio": compression_ratio,
         "quantization_score": quantization_score,
         "histogram_counts": {

@@ -1324,3 +1324,289 @@ The most important unresolved question may now be:
 Bagged HDDT remains the strongest unresolved anomaly in the current framework.
 
 That now feels increasingly central.
+
+
+
+# Research Log — Allocation Morphology Emergence
+
+## Date
+
+2026-06-02
+
+---
+
+# Context
+
+This line of work began as an attempt to understand why models with similar ranking and calibration performance exhibited materially different accessibility behavior under threshold policy changes in severely imbalanced settings.
+
+The original working hypothesis for Paper 2 was that accessibility persistence and cliff behavior might emerge from latent representation topology:
+
+```text
+objective
+    ↓
+representation topology
+    ↓
+accessibility geometry
+```
+
+Specifically, we investigated whether minority-support connectedness, fragmentation, or voxel-like occupancy structure in latent space explained accessibility persistence and cliffiness.
+
+---
+
+# Topology Investigation
+
+We implemented multiple topology diagnostics over minority support:
+
+* kNN positive-support graphs
+* radius-based positive-support graphs
+* connected-component statistics
+* giant-component fraction
+* isolated-positive fraction
+* component entropy
+* mean and median component size
+
+The expectation was that:
+
+* connected minority support would produce smooth accessibility decay,
+* fragmented support would produce cliff-like accessibility loss.
+
+However, across the current synthetic MLP pilot:
+
+* topology metrics varied,
+* but topology consistently exhibited weak explanatory power for both survival level and survival shape.
+
+In mediation-style regressions:
+
+* topology-only models performed poorly,
+* and topology added little or negative incremental value after allocation metrics were included.
+
+Current evidence suggests topology is not the dominant first-order explanation in this setting.
+
+This does *not* rule out topology entirely. It may:
+
+* require harder datasets,
+* require richer representation spaces,
+* emerge more strongly under deployment shift,
+* or become relevant only for specific model families.
+
+But topology is currently a secondary hypothesis rather than the leading explanation.
+
+---
+
+# Emergence of Allocation Morphology
+
+The research direction shifted after introducing explicit score-allocation diagnostics.
+
+Initially, allocation was treated as a mostly one-dimensional concept related to concentration or quantization.
+
+However, the current experiments strongly suggest allocation is multi-dimensional.
+
+Two major axes emerged:
+
+## 1. Allocation Breadth
+
+Operational interpretation:
+
+> How widely positive examples occupy score space.
+
+Primary metrics:
+
+* positive_histogram_entropy
+* positive_effective_score_bins
+
+Observed relationships:
+
+* higher breadth strongly associated with reduced accessibility cliffiness,
+* broader allocation produces smoother accessibility decay trajectories.
+
+Key pilot result:
+
+```text
+positive_histogram_entropy
+↔ minority_survival_cliffiness
+
+r ≈ -0.80
+```
+
+This is currently one of the strongest observed relationships in the entire program.
+
+---
+
+## 2. Allocation Elevation
+
+Operational interpretation:
+
+> How much positive probability mass reaches high-confidence score regions.
+
+Primary metrics:
+
+* positive_top_bin_mass
+* positive_max_bin_mass
+
+Observed relationships:
+
+* higher elevation strongly associated with higher survival level.
+
+Key pilot result:
+
+```text
+positive_top_bin_mass
+↔ minority_survival_auc
+
+r ≈ 0.88
+```
+
+This is the single strongest correlation observed in the current pilot.
+
+---
+
+# Emerging Interpretation
+
+Accessibility geometry now appears decomposable into at least two partially independent properties:
+
+| Accessibility Property      | Allocation Driver |
+| --------------------------- | ----------------- |
+| Survival Level              | Elevation         |
+| Survival Shape / Cliffiness | Breadth           |
+
+This is a substantially richer interpretation than the earlier “single persistence object” framing.
+
+The current working interpretation is:
+
+```text
+objective
+    ↓
+allocation morphology
+    ↓
+accessibility geometry
+```
+
+rather than:
+
+```text
+objective
+    ↓
+topology
+    ↓
+accessibility geometry
+```
+
+---
+
+# Dropout Findings
+
+Feature-dropout training variants were introduced as an approximation to feature-subspace sampling analogous to Random Forest feature sampling.
+
+Expectation:
+
+```text
+dropout
+    ↓
+broader allocation
+    ↓
+better accessibility
+```
+
+Observed result was more nuanced.
+
+Dropout generally:
+
+* increased breadth,
+* reduced cliffiness,
+* but often reduced elevation and survival level.
+
+This suggests a tradeoff:
+
+| Effect         | Dropout Tendency |
+| -------------- | ---------------- |
+| Breadth        | Increase         |
+| Cliffiness     | Decrease         |
+| Elevation      | Often decrease   |
+| Survival Level | Often decrease   |
+
+This was especially visible relative to weighted BCE.
+
+The result suggests:
+
+> Broad allocation alone is insufficient.
+
+Allocation breadth and allocation elevation appear separable.
+
+---
+
+# Allocation Morphology Space
+
+The current pilot suggests allocation may naturally organize into a two-axis morphology space:
+
+| Breadth | Elevation | Interpretation                    |
+| ------- | --------- | --------------------------------- |
+| High    | High      | Broad + confident allocation      |
+| High    | Low       | Diffuse but weak allocation       |
+| Low     | High      | Concentrated confident allocation |
+| Low     | Low       | Weak concentrated allocation      |
+
+This framing resembles a portfolio-style tradeoff between diversification and concentration.
+
+The allocator taxonomy may ultimately become a taxonomy over regions of this morphology space.
+
+---
+
+# Current Working Thesis For Paper 2
+
+Current evidence supports the following thesis:
+
+> Under severe class imbalance, learning objectives induce distinct allocation morphologies. Allocation morphology appears to possess at least two axes—breadth and elevation—which separately govern accessibility shape and accessibility level.
+
+---
+
+# Current Confidence Levels
+
+## High Confidence
+
+* Accessibility geometry is not fully characterized by ranking metrics.
+* Allocation metrics explain accessibility behavior better than topology metrics in the current pilot.
+* Breadth and elevation behave differently and appear partially separable.
+* Survival level tracks elevation strongly.
+* Cliffiness tracks breadth strongly.
+
+## Moderate Confidence
+
+* Dropout behaves like a breadth-expanding mechanism.
+* Weighted BCE behaves like an elevation-enhancing mechanism.
+* Allocation morphology may provide a more explanatory framework than topology for accessibility geometry.
+
+## Low Confidence / Open Questions
+
+* Whether topology becomes important on harder or real datasets.
+* Whether these findings generalize beyond sklearn MLPs.
+* Whether the same morphology structure appears in boosted trees or transformers.
+* Whether calibration manipulations directly alter morphology.
+* Whether allocation morphology predicts deployment robustness.
+
+---
+
+# Immediate Next Experiment
+
+Most promising next direction:
+
+## Allocation Morphology Trajectories
+
+Checkpoint training over epochs and measure:
+
+* breadth
+* elevation
+* survival_auc
+* cliffiness
+
+for:
+
+* BCE
+* weighted BCE
+* oversampling
+* dropout
+
+Goal:
+
+> Understand how different learning objectives move through allocation morphology space during training.
+
+This may become the central mechanistic result of Paper 2.
