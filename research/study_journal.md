@@ -1610,3 +1610,297 @@ Goal:
 > Understand how different learning objectives move through allocation morphology space during training.
 
 This may become the central mechanistic result of Paper 2.
+
+
+Research Log Entry
+
+Project: Accessibility Geometry / Allocation Morphology
+Date: 2026-06-03
+Experiment: Dense Weighted BCE Feature-Dropout Sweep Across Skew Regimes
+
+Objective
+
+Evaluate whether feature-dropout acts as a breadth-expanding regularizer and determine how dropout affects allocation morphology and accessibility under extreme class imbalance.
+
+This experiment was motivated by an analogy to Random Forest feature subspace sampling. The working hypothesis was:
+
+Feature Dropout
+    →
+More Diverse Internal Representations
+    →
+Greater Allocation Breadth
+    →
+Improved Accessibility
+
+The broader goal was to understand how learning objectives move through allocation morphology space and whether accessibility can be manipulated independently of conventional ranking metrics.
+
+Experimental Design
+Model Family
+
+Weighted BCE classifier with feature-dropout augmentation.
+
+Implementation note:
+
+Dropout was approximated through Bernoulli feature masking during training.
+Dense sweep used an sklearn MLP configuration with no hidden layers to keep the full grid computationally feasible.
+This experiment should therefore be interpreted primarily as a feature-subspace perturbation study rather than a deep-network dropout study.
+Sweep Parameters
+Parameter	Values
+Dropout Rate	0.00 – 0.50 (step 0.05)
+Skew Ratios	25, 100, 500, 1000
+Minority Count	100
+Seeds	20
+Total Fits	880
+Recorded Metrics
+
+Allocation Morphology
+
+Breadth
+Elevation
+
+Accessibility
+
+Minority Survival AUC
+Minority Survival Cliffiness
+
+Traditional Metrics
+
+AUROC
+Average Precision
+Results
+Observation 1: Accessibility Improves Consistently With Dropout
+
+Across all four skew regimes:
+
+Higher Dropout
+    →
+Higher Survival AUC
+
+Best Survival AUC occurred at:
+
+dropout = 0.50
+
+for every skew ratio tested.
+
+Examples:
+
+Skew	Survival AUC @ 0.00	Survival AUC @ 0.50
+25	0.960	0.967
+100	0.930	0.966
+500	0.905	0.962
+1000	0.914	0.960
+
+The effect becomes larger as skew increases.
+
+Observation 2: Breadth Decreases Under Dropout
+
+This directly contradicts the original hypothesis.
+
+Across every skew regime:
+
+Higher Dropout
+    →
+Lower Breadth
+
+Examples:
+
+Skew	Breadth @ 0.00	Breadth @ 0.50
+100	0.560	0.381
+500	0.675	0.406
+1000	0.624	0.431
+
+Instead of expanding allocation support, dropout appears to compress it.
+
+Observation 3: Elevation Increases Under Dropout
+
+Across every skew regime:
+
+Higher Dropout
+    →
+Higher Elevation
+
+Examples:
+
+Skew	Elevation @ 0.00	Elevation @ 0.50
+100	0.833	0.871
+500	0.795	0.858
+1000	0.822	0.856
+
+This increase is highly consistent.
+
+Observation 4: Cliffiness Increases Under Dropout
+
+Unexpectedly:
+
+Higher Dropout
+    →
+Higher Cliffiness
+
+Examples:
+
+Skew	Cliffiness @ 0.00	Cliffiness @ 0.50
+100	0.654	0.977
+500	0.642	0.978
+1000	0.606	0.949
+
+Accessibility level improves while accessibility shape becomes more concentrated.
+
+Correlation Structure
+Elevation vs Survival AUC
+Skew	Correlation
+25	0.866
+100	0.840
+500	0.883
+1000	0.787
+
+This is one of the strongest relationships observed in the entire accessibility program.
+
+Interpretation:
+
+Elevation
+appears closely tied to
+Accessibility Level
+
+where level is represented by Survival AUC.
+
+Breadth vs Cliffiness
+Skew	Correlation
+25	-0.199
+100	-0.526
+500	-0.709
+1000	-0.670
+
+The relationship strengthens substantially under severe imbalance.
+
+Interpretation:
+
+Breadth
+appears closely tied to
+Accessibility Shape
+
+where shape is represented by cliffiness.
+
+Emerging Interpretation
+
+The original expectation was:
+
+Dropout
+    →
+More Breadth
+    →
+Better Accessibility
+
+The observed behavior is instead:
+
+Dropout
+    →
+More Elevation
+    →
+Higher Survival
+
+while simultaneously
+
+Dropout
+    →
+Less Breadth
+    →
+More Cliffiness
+
+This suggests that accessibility cannot be represented by a single scalar quantity.
+
+Instead, the evidence increasingly supports:
+
+Accessibility
+    =
+(Level, Shape)
+
+where
+
+Level
+    ≈ Survival AUC
+
+Shape
+    ≈ Cliffiness
+
+and these dimensions can move independently.
+
+Implications For Paper 1
+
+This experiment does not change the central Paper 1 claim:
+
+Ranking quality is not sufficient to characterize accessibility.
+
+However, it strengthens a future-work direction:
+
+Accessibility appears to possess internal structure.
+
+A possible framing:
+
+Accessibility Level
+    (how much minority support survives)
+
+Accessibility Shape
+    (how that support disappears)
+
+The dropout sweep provides evidence that interventions can improve one dimension while worsening another.
+
+This supports treating accessibility as a structured property of learning systems rather than a single quantity.
+
+Open Questions
+1. Why does dropout increase elevation?
+
+Possible explanations:
+
+Increased robustness to majority noise.
+Implicit ensemble averaging.
+More stable minority decision boundaries.
+Reduced memorization of majority-specific features.
+2. Why does breadth collapse?
+
+Possible explanations:
+
+Dropout concentrates minority mass into fewer high-confidence regions.
+Feature masking removes weak minority-support pathways.
+Accessibility is becoming taller rather than wider.
+3. Is this fundamentally an information-density phenomenon?
+
+Hypothesis:
+
+Rare-event failures
+    may occur because
+    the model has insufficient information
+    in portions of minority space.
+
+Morphology may be measuring how learning algorithms allocate finite informational resources across minority regions.
+
+4. Does oversampling interact with dropout?
+
+The next major experiment should be:
+
+Weighted BCE × Oversampling Grid
+
+to determine whether:
+
+weighting primarily drives elevation,
+oversampling primarily drives breadth,
+dropout amplifies one or both effects.
+
+This experiment may provide the first clear mechanism map for allocation morphology.
+
+Current Belief
+
+Confidence is increasing that allocation morphology is measuring something real and structurally meaningful.
+
+The specific mechanisms continue to surprise us.
+
+The morphology variables themselves continue to reappear across objectives, skew regimes, and interventions.
+
+The strongest emerging picture is:
+
+Breadth
+    ↔ Accessibility Shape
+
+Elevation
+    ↔ Accessibility Level
+
+and learning objectives appear to navigate this morphology space along different trajectories rather than simply producing better or worse ranking models.
