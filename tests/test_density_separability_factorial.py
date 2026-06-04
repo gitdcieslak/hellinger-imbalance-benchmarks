@@ -37,6 +37,8 @@ def _tiny_df():
                         {
                             "density_level": density_level,
                             "separability_level": separability_level,
+                            "density_label": f"cov_{minority_cov:.2f}".replace(".", "_"),
+                            "separability_label": f"dist_{centroid_distance:.1f}".replace(".", "_"),
                             "minority_cov": minority_cov,
                             "centroid_distance": centroid_distance,
                             "model_id": model_id,
@@ -76,6 +78,46 @@ def test_grid_construction():
     assert len(grid) == 16
     assert grid[0]["minority_cov"] == 0.1
     assert grid[0]["centroid_distance"] == 4.0
+    assert grid[0]["density_label"] == "cov_0_10"
+    assert grid[0]["separability_label"] == "dist_4_0"
+
+
+def test_numeric_grid_construction_and_parsing():
+    module = _load_run_module()
+
+    grid = module.construct_grid(
+        None,
+        None,
+        ["mlp_weighted_bce"],
+        module.parse_int_list("0-1"),
+        minority_covs=module.parse_float_list("0.05,0.10"),
+        centroid_distances=module.parse_float_list("4.0,0.5"),
+    )
+
+    assert len(grid) == 8
+    assert module.parse_int_list("0-2,5") == [0, 1, 2, 5]
+    assert module.numeric_label("cov", 0.05) == "cov_0_05"
+    assert module.numeric_label("cov", 0.10) == "cov_0_10"
+    assert module.numeric_label("dist", 0.5) == "dist_0_5"
+    assert module.numeric_label("dist", 4.0) == "dist_4_0"
+    assert {row["density_label"] for row in grid} == {"cov_0_05", "cov_0_10"}
+    assert {row["separability_label"] for row in grid} == {"dist_4_0", "dist_0_5"}
+
+
+def test_categorical_grid_backward_compatibility():
+    module = _load_run_module()
+
+    grid = module.construct_grid(
+        ["high_density"],
+        ["low_separability"],
+        ["mlp_weighted_bce"],
+        [0],
+    )
+
+    assert grid[0]["density_level"] == "high_density"
+    assert grid[0]["separability_level"] == "low_separability"
+    assert grid[0]["minority_cov"] == 0.1
+    assert grid[0]["centroid_distance"] == 1.0
 
 
 def test_synthetic_dataset_generation_shape():
@@ -103,6 +145,8 @@ def test_output_row_construction():
     row = module.build_output_row(
         density_level="high_density",
         separability_level="high_separability",
+        density_label="cov_0_10",
+        separability_label="dist_4_0",
         minority_cov=0.1,
         centroid_distance=4.0,
         model_id="mlp_weighted_bce",
@@ -122,6 +166,7 @@ def test_output_row_construction():
 
     assert set(row) == set(module.OUTPUT_COLUMNS)
     assert row["density_level"] == "high_density"
+    assert row["density_label"] == "cov_0_10"
     assert row["registry_model_id"] == "mlp_weighted"
 
 
@@ -147,7 +192,25 @@ def test_report_generation_on_tiny_csv(tmp_path):
     report = output_md.read_text(encoding="utf-8")
 
     assert "## Factor Effects" in report
+    assert "## Continuous Factor Correlations" in report
     assert "Does density independently affect elevation?" in report
-    assert len(paths) == 6
+    assert len(paths) == 8
     for path in paths:
         assert path.exists()
+
+
+def test_report_generation_with_numeric_grid(tmp_path):
+    module = _load_report_module()
+    input_path = tmp_path / "numeric.csv"
+    output_md = tmp_path / "numeric_summary.md"
+    df = _tiny_df().copy()
+    df["density_level"] = df["density_label"]
+    df["separability_level"] = df["separability_label"]
+    df.to_csv(input_path, index=False)
+
+    paths = module.write_report(input_path, output_md)
+    report = output_md.read_text(encoding="utf-8")
+
+    assert "minority_cov" in report
+    assert "centroid_distance" in report
+    assert len(paths) == 8

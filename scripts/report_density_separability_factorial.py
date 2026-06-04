@@ -5,6 +5,9 @@ from __future__ import annotations
 import argparse
 from pathlib import Path
 
+import matplotlib
+
+matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
@@ -27,6 +30,7 @@ METRICS = [
     "local_positive_ratio_mean",
     "local_label_entropy_mean",
 ]
+CURVE_METRICS = ["minority_survival_auc", "minority_survival_cliffiness", "breadth", "elevation"]
 
 
 def _markdown_table(df: pd.DataFrame, floatfmt: str = ".4f") -> str:
@@ -46,8 +50,26 @@ def _markdown_table(df: pd.DataFrame, floatfmt: str = ".4f") -> str:
     return "\n".join(lines)
 
 
-def factor_features(df: pd.DataFrame) -> pd.DataFrame:
+def _label(prefix: str, value: float) -> str:
+    precision = 2 if prefix == "cov" else 1
+    return f"{prefix}_{float(value):.{precision}f}".replace("-", "neg_").replace(".", "_")
+
+
+def normalize_columns(df: pd.DataFrame) -> pd.DataFrame:
     out = df.copy()
+    if "density_label" not in out.columns:
+        out["density_label"] = out.get("density_level", out["minority_cov"].map(lambda v: _label("cov", v)))
+    if "separability_label" not in out.columns:
+        out["separability_label"] = out.get("separability_level", out["centroid_distance"].map(lambda v: _label("dist", v)))
+    if "density_level" not in out.columns:
+        out["density_level"] = out["density_label"]
+    if "separability_level" not in out.columns:
+        out["separability_level"] = out["separability_label"]
+    return out
+
+
+def factor_features(df: pd.DataFrame) -> pd.DataFrame:
+    out = normalize_columns(df)
     out["density_numeric"] = out["minority_cov"].astype(float)
     out["separability_numeric"] = out["centroid_distance"].astype(float)
     out["density_x_separability"] = out["density_numeric"] * out["separability_numeric"]
@@ -56,10 +78,11 @@ def factor_features(df: pd.DataFrame) -> pd.DataFrame:
 
 
 def cell_means(df: pd.DataFrame) -> pd.DataFrame:
+    df = normalize_columns(df)
     return (
-        df.groupby(["density_level", "separability_level", "model_id"], as_index=False)[METRICS]
+        df.groupby(["density_label", "separability_label", "minority_cov", "centroid_distance", "model_id"], as_index=False)[METRICS]
         .mean()
-        .sort_values(["density_level", "separability_level", "model_id"])
+        .sort_values(["minority_cov", "centroid_distance", "model_id"])
     )
 
 
@@ -78,19 +101,36 @@ def factor_effects(df: pd.DataFrame) -> pd.DataFrame:
     return pd.DataFrame(rows)
 
 
+def correlation_table(df: pd.DataFrame) -> pd.DataFrame:
+    featured = factor_features(df)
+    rows = []
+    for predictor in ["minority_cov", "centroid_distance", "density_x_separability"]:
+        source = predictor if predictor != "density_x_separability" else "density_x_separability"
+        for outcome in CURVE_METRICS:
+            rows.append(
+                {
+                    "predictor": predictor,
+                    "outcome": outcome,
+                    "correlation": float(featured[source].corr(featured[outcome])),
+                }
+            )
+    return pd.DataFrame(rows)
+
+
 def dropout_benefit(df: pd.DataFrame) -> pd.DataFrame:
+    df = normalize_columns(df)
     base = df[~df["model_id"].astype(str).str.contains("dropout")]
     drop = df[df["model_id"].astype(str).str.contains("dropout")]
     if base.empty or drop.empty:
         return pd.DataFrame()
-    keys = ["density_level", "separability_level", "seed"]
+    keys = ["minority_cov", "centroid_distance", "density_label", "separability_label", "seed"]
     base_cols = keys + ["minority_survival_auc", "minority_survival_cliffiness", "breadth", "elevation"]
     drop_cols = base_cols
     merged = base[base_cols].merge(drop[drop_cols], on=keys, suffixes=("_base", "_dropout"))
     for metric in ["minority_survival_auc", "minority_survival_cliffiness", "breadth", "elevation"]:
         merged[f"delta_{metric}"] = merged[f"{metric}_dropout"] - merged[f"{metric}_base"]
     return (
-        merged.groupby(["density_level", "separability_level"], as_index=False)[
+        merged.groupby(["density_label", "separability_label", "minority_cov", "centroid_distance"], as_index=False)[
             [
                 "delta_minority_survival_auc",
                 "delta_minority_survival_cliffiness",
@@ -99,7 +139,7 @@ def dropout_benefit(df: pd.DataFrame) -> pd.DataFrame:
             ]
         ]
         .mean()
-        .sort_values(["density_level", "separability_level"])
+        .sort_values(["minority_cov", "centroid_distance"])
     )
 
 
@@ -131,8 +171,10 @@ def interpretation_lines(df: pd.DataFrame) -> list[str]:
     if benefit.empty:
         dropout_line = "- Does dropout help more in low-density or low-separability regimes? Not estimable because no paired dropout/base models were present."
     else:
-        low_density = benefit[benefit["density_level"] == "low_density"]["delta_minority_survival_auc"].mean()
-        low_sep = benefit[benefit["separability_level"] == "low_separability"]["delta_minority_survival_auc"].mean()
+        low_density_cutoff = benefit["minority_cov"].quantile(0.75)
+        low_sep_cutoff = benefit["centroid_distance"].quantile(0.25)
+        low_density = benefit[benefit["minority_cov"] >= low_density_cutoff]["delta_minority_survival_auc"].mean()
+        low_sep = benefit[benefit["centroid_distance"] <= low_sep_cutoff]["delta_minority_survival_auc"].mean()
         target = "low-density" if low_density >= low_sep else "low-separability"
         dropout_line = f"- Does dropout help more in low-density or low-separability regimes? {target}; mean survival AUC delta low-density={low_density:.4f}, low-separability={low_sep:.4f}."
 
@@ -147,8 +189,9 @@ def interpretation_lines(df: pd.DataFrame) -> list[str]:
 
 
 def build_density_separability_report(df: pd.DataFrame) -> str:
+    df = normalize_columns(df)
     lines = [
-        "# Density x Separability Factorial Smoke",
+        "# Density x Separability Factorial",
         "",
         f"Rows: {len(df)}",
         "",
@@ -156,10 +199,13 @@ def build_density_separability_report(df: pd.DataFrame) -> str:
         _markdown_table(cell_means(df)),
         "",
         "## Factor And Interaction Features",
-        _markdown_table(factor_features(df)[["density_level", "separability_level", "minority_cov", "centroid_distance", "density_numeric", "separability_numeric", "density_x_separability", "is_dropout"]].drop_duplicates()),
+        _markdown_table(factor_features(df)[["density_label", "separability_label", "minority_cov", "centroid_distance", "density_numeric", "separability_numeric", "density_x_separability", "is_dropout"]].drop_duplicates()),
         "",
         "## Factor Effects",
         _markdown_table(factor_effects(df)),
+        "",
+        "## Continuous Factor Correlations",
+        _markdown_table(correlation_table(df)),
         "",
         "## Dropout Benefit",
         _markdown_table(dropout_benefit(df)),
@@ -176,16 +222,17 @@ def _ordered(values: list[str], order: list[str]) -> list[str]:
 
 def plot_heatmap(df: pd.DataFrame, metric: str, output_path: Path, title: str) -> Path:
     output_path.parent.mkdir(parents=True, exist_ok=True)
-    means = df.groupby(["density_level", "separability_level"], as_index=False)[metric].mean()
-    density_order = _ordered(list(means["density_level"].unique()), DENSITY_ORDER)
-    sep_order = _ordered(list(means["separability_level"].unique()), SEPARABILITY_ORDER)
-    pivot = means.pivot(index="density_level", columns="separability_level", values=metric).reindex(index=density_order, columns=sep_order)
+    df = normalize_columns(df)
+    means = df.groupby(["density_label", "separability_label", "minority_cov", "centroid_distance"], as_index=False)[metric].mean()
+    density_order = list(means.sort_values("minority_cov")["density_label"].drop_duplicates())
+    sep_order = list(means.sort_values("centroid_distance")["separability_label"].drop_duplicates())
+    pivot = means.pivot(index="density_label", columns="separability_label", values=metric).reindex(index=density_order, columns=sep_order)
     fig, ax = plt.subplots(figsize=(7, 5))
     image = ax.imshow(pivot.to_numpy(dtype=float), aspect="auto", cmap="viridis")
     ax.set_xticks(np.arange(len(pivot.columns)), labels=list(pivot.columns), rotation=20, ha="right")
     ax.set_yticks(np.arange(len(pivot.index)), labels=list(pivot.index))
-    ax.set_xlabel("separability_level")
-    ax.set_ylabel("density_level")
+    ax.set_xlabel("centroid_distance")
+    ax.set_ylabel("minority_cov")
     ax.set_title(title)
     for y_idx, density in enumerate(pivot.index):
         for x_idx, sep in enumerate(pivot.columns):
@@ -212,12 +259,42 @@ def plot_morphology(df: pd.DataFrame, output_path: Path) -> Path:
         linewidths=0.5,
     )
     for row in means.itertuples(index=False):
-        ax.annotate(f"{row.density_level}\n{row.separability_level}\n{row.model_id}", (row.breadth, row.elevation), fontsize=7)
+        ax.annotate(f"{row.density_label}\n{row.separability_label}\n{row.model_id}", (row.breadth, row.elevation), fontsize=7)
     ax.set_xlabel("breadth")
     ax.set_ylabel("elevation")
     ax.set_title("Density x Separability Morphology Space")
     ax.grid(alpha=0.25)
     fig.colorbar(scatter, ax=ax, label="minority_survival_auc")
+    fig.tight_layout()
+    fig.savefig(output_path, dpi=160)
+    plt.close(fig)
+    return output_path
+
+
+def _mean_ci(df: pd.DataFrame, factor: str, metric: str) -> pd.DataFrame:
+    grouped = df.groupby(factor)[metric]
+    rows = []
+    for value, series in grouped:
+        arr = series.to_numpy(dtype=float)
+        mean = float(np.mean(arr))
+        ci = 1.96 * float(np.std(arr, ddof=1)) / np.sqrt(arr.size) if arr.size > 1 else 0.0
+        rows.append({factor: float(value), "mean": mean, "ci": ci})
+    return pd.DataFrame(rows).sort_values(factor)
+
+
+def plot_factor_curves(df: pd.DataFrame, factor: str, output_path: Path, title: str) -> Path:
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    df = normalize_columns(df)
+    fig, axes = plt.subplots(2, 2, figsize=(9, 7), sharex=True)
+    for ax, metric in zip(axes.ravel(), CURVE_METRICS, strict=False):
+        stats = _mean_ci(df, factor, metric)
+        ax.plot(stats[factor], stats["mean"], marker="o")
+        ax.fill_between(stats[factor], stats["mean"] - stats["ci"], stats["mean"] + stats["ci"], alpha=0.20)
+        ax.set_title(metric)
+        ax.grid(alpha=0.25)
+    for ax in axes[-1, :]:
+        ax.set_xlabel(factor)
+    fig.suptitle(title)
     fig.tight_layout()
     fig.savefig(output_path, dpi=160)
     plt.close(fig)
@@ -232,8 +309,10 @@ def write_report(
     output_elevation: Path | None = None,
     output_breadth: Path | None = None,
     output_morphology: Path | None = None,
+    output_density_curves: Path | None = None,
+    output_separability_curves: Path | None = None,
 ) -> tuple[Path, ...]:
-    df = pd.read_csv(input_path)
+    df = normalize_columns(pd.read_csv(input_path))
     output_md.parent.mkdir(parents=True, exist_ok=True)
     output_md.write_text(build_density_separability_report(df), encoding="utf-8")
     base = output_md.parent
@@ -247,6 +326,8 @@ def write_report(
     for metric, path, title in plot_specs:
         paths.append(plot_heatmap(df, metric, path, title))
     paths.append(plot_morphology(df, output_morphology or base / "density_separability_morphology_space.png"))
+    paths.append(plot_factor_curves(df, "minority_cov", output_density_curves or base / "density_separability_density_curves.png", "Density Curves"))
+    paths.append(plot_factor_curves(df, "centroid_distance", output_separability_curves or base / "density_separability_separability_curves.png", "Separability Curves"))
     return tuple(paths)
 
 
@@ -259,6 +340,8 @@ def main() -> None:
     parser.add_argument("--output-elevation", type=Path, default=None)
     parser.add_argument("--output-breadth", type=Path, default=None)
     parser.add_argument("--output-morphology", type=Path, default=None)
+    parser.add_argument("--output-density-curves", type=Path, default=None)
+    parser.add_argument("--output-separability-curves", type=Path, default=None)
     args = parser.parse_args()
     paths = write_report(
         args.input,
@@ -268,6 +351,8 @@ def main() -> None:
         args.output_elevation,
         args.output_breadth,
         args.output_morphology,
+        args.output_density_curves,
+        args.output_separability_curves,
     )
     for path in paths:
         print(f"wrote {path}")

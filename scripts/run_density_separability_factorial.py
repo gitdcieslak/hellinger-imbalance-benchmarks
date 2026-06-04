@@ -43,6 +43,8 @@ MODEL_ALIASES = {
 OUTPUT_COLUMNS = [
     "density_level",
     "separability_level",
+    "density_label",
+    "separability_label",
     "minority_cov",
     "centroid_distance",
     "model_id",
@@ -77,30 +79,79 @@ def parse_list(value: str) -> list[str]:
 
 
 def parse_int_list(value: str) -> list[int]:
-    return [int(item.strip()) for item in value.split(",") if item.strip()]
+    values: list[int] = []
+    for item in [part.strip() for part in value.split(",") if part.strip()]:
+        if "-" in item:
+            start, end = item.split("-", 1)
+            values.extend(range(int(start), int(end) + 1))
+        else:
+            values.append(int(item))
+    return values
+
+
+def parse_float_list(value: str) -> list[float]:
+    return [float(item.strip()) for item in value.split(",") if item.strip()]
+
+
+def numeric_label(prefix: str, value: float) -> str:
+    precision = 2 if prefix == "cov" else 1
+    text = f"{float(value):.{precision}f}".replace("-", "neg_").replace(".", "_")
+    return f"{prefix}_{text}"
+
+
+def resolve_density_grid(
+    density_levels: list[str] | None = None,
+    minority_covs: list[float] | None = None,
+) -> list[tuple[str, str, float]]:
+    if minority_covs is not None:
+        return [(numeric_label("cov", value), numeric_label("cov", value), float(value)) for value in minority_covs]
+    levels = density_levels if density_levels is not None else list(DENSITY_LEVELS)
+    rows = []
+    for level in levels:
+        if level not in DENSITY_LEVELS:
+            raise ValueError(f"unknown density level {level!r}")
+        rows.append((level, numeric_label("cov", DENSITY_LEVELS[level]), DENSITY_LEVELS[level]))
+    return rows
+
+
+def resolve_separability_grid(
+    separability_levels: list[str] | None = None,
+    centroid_distances: list[float] | None = None,
+) -> list[tuple[str, str, float]]:
+    if centroid_distances is not None:
+        return [(numeric_label("dist", value), numeric_label("dist", value), float(value)) for value in centroid_distances]
+    levels = separability_levels if separability_levels is not None else list(SEPARABILITY_LEVELS)
+    rows = []
+    for level in levels:
+        if level not in SEPARABILITY_LEVELS:
+            raise ValueError(f"unknown separability level {level!r}")
+        rows.append((level, numeric_label("dist", SEPARABILITY_LEVELS[level]), SEPARABILITY_LEVELS[level]))
+    return rows
 
 
 def construct_grid(
-    density_levels: list[str],
-    separability_levels: list[str],
+    density_levels: list[str] | None,
+    separability_levels: list[str] | None,
     model_ids: list[str],
     seeds: list[int],
+    minority_covs: list[float] | None = None,
+    centroid_distances: list[float] | None = None,
 ) -> list[dict[str, str | int | float]]:
     rows = []
-    for density_level in density_levels:
-        if density_level not in DENSITY_LEVELS:
-            raise ValueError(f"unknown density level {density_level!r}")
-        for separability_level in separability_levels:
-            if separability_level not in SEPARABILITY_LEVELS:
-                raise ValueError(f"unknown separability level {separability_level!r}")
+    density_grid = resolve_density_grid(density_levels, minority_covs)
+    separability_grid = resolve_separability_grid(separability_levels, centroid_distances)
+    for density_level, density_label, minority_cov in density_grid:
+        for separability_level, separability_label, centroid_distance in separability_grid:
             for model_id in model_ids:
                 for seed in seeds:
                     rows.append(
                         {
                             "density_level": density_level,
                             "separability_level": separability_level,
-                            "minority_cov": DENSITY_LEVELS[density_level],
-                            "centroid_distance": SEPARABILITY_LEVELS[separability_level],
+                            "density_label": density_label,
+                            "separability_label": separability_label,
+                            "minority_cov": minority_cov,
+                            "centroid_distance": centroid_distance,
                             "model_id": model_id,
                             "seed": int(seed),
                         }
@@ -197,6 +248,8 @@ def build_output_row(
     *,
     density_level: str,
     separability_level: str,
+    density_label: str,
+    separability_label: str,
     minority_cov: float,
     centroid_distance: float,
     model_id: str,
@@ -214,6 +267,8 @@ def build_output_row(
     row = {
         "density_level": density_level,
         "separability_level": separability_level,
+        "density_label": density_label,
+        "separability_label": separability_label,
         "minority_cov": float(minority_cov),
         "centroid_distance": float(centroid_distance),
         "model_id": model_id,
@@ -240,13 +295,15 @@ def run_cell(
     *,
     density_level: str,
     separability_level: str,
+    density_label: str,
+    separability_label: str,
+    minority_cov: float,
+    centroid_distance: float,
     model_id: str,
     seed: int,
     skew_ratio: int,
     minority_count: int,
 ) -> dict[str, float | int | str]:
-    minority_cov = DENSITY_LEVELS[density_level]
-    centroid_distance = SEPARABILITY_LEVELS[separability_level]
     dataset = make_factorial_dataset(
         minority_cov=minority_cov,
         centroid_distance=centroid_distance,
@@ -265,6 +322,8 @@ def run_cell(
     return build_output_row(
         density_level=density_level,
         separability_level=separability_level,
+        density_label=density_label,
+        separability_label=separability_label,
         minority_cov=minority_cov,
         centroid_distance=centroid_distance,
         model_id=model_id,
@@ -287,9 +346,11 @@ def run_experiment(
     skew_ratio: int,
     minority_count: int,
     output_path: Path,
+    minority_covs: list[float] | None = None,
+    centroid_distances: list[float] | None = None,
 ) -> Path:
     output_path.parent.mkdir(parents=True, exist_ok=True)
-    grid = construct_grid(density_levels, separability_levels, model_ids, seeds)
+    grid = construct_grid(density_levels, separability_levels, model_ids, seeds, minority_covs, centroid_distances)
     with output_path.open("w", newline="", encoding="utf-8") as handle:
         writer = csv.DictWriter(handle, fieldnames=OUTPUT_COLUMNS)
         writer.writeheader()
@@ -298,6 +359,10 @@ def run_experiment(
                 run_cell(
                     density_level=str(cell["density_level"]),
                     separability_level=str(cell["separability_level"]),
+                    density_label=str(cell["density_label"]),
+                    separability_label=str(cell["separability_label"]),
+                    minority_cov=float(cell["minority_cov"]),
+                    centroid_distance=float(cell["centroid_distance"]),
                     model_id=str(cell["model_id"]),
                     seed=int(cell["seed"]),
                     skew_ratio=skew_ratio,
@@ -312,6 +377,8 @@ def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--density-levels", default=",".join(DENSITY_LEVELS))
     parser.add_argument("--separability-levels", default=",".join(SEPARABILITY_LEVELS))
+    parser.add_argument("--minority-covs", default=None)
+    parser.add_argument("--centroid-distances", default=None)
     parser.add_argument("--models", default=",".join(DEFAULT_MODELS))
     parser.add_argument("--seeds", default=",".join(str(seed) for seed in range(20)))
     parser.add_argument("--skew-ratio", type=int, default=100)
@@ -330,6 +397,8 @@ def main() -> None:
         skew_ratio=args.skew_ratio,
         minority_count=args.minority_count,
         output_path=args.output,
+        minority_covs=parse_float_list(args.minority_covs) if args.minority_covs else None,
+        centroid_distances=parse_float_list(args.centroid_distances) if args.centroid_distances else None,
     )
     print(f"wrote {output}")
 
