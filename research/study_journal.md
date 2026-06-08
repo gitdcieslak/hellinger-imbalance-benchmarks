@@ -1904,3 +1904,12 @@ Elevation
     ↔ Accessibility Level
 
 and learning objectives appear to navigate this morphology space along different trajectories rather than simply producing better or worse ranking models.
+
+
+
+
+# 2026-06-04
+
+## Density appears first-order, but fragmentation remains unresolved.
+
+Current evidence supports density as the dominant accessibility axis, but the synthetic construction still allows density, support volume, and fragmentation to be partially entangled. The next test should hold local density/separability approximately fixed while varying the number of minority islands.

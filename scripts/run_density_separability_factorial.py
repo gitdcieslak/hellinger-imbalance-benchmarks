@@ -36,6 +36,8 @@ SEPARABILITY_LEVELS = {
     "low_separability": 1.00,
 }
 DEFAULT_MODELS = ["mlp_weighted_bce", "mlp_weighted_bce_dropout_0_1"]
+DENSITY_THRESHOLD_COVS = [0.05, 0.10, 0.15, 0.20, 0.25, 0.30, 0.35, 0.40, 0.50, 0.60, 0.80, 1.00, 1.20, 1.60]
+DENSITY_THRESHOLD_DISTANCES = [0.5, 1.0, 2.0, 4.0]
 MODEL_ALIASES = {
     "mlp_weighted_bce": "mlp_weighted",
     "mlp_oversampled_bce": "mlp_oversampled",
@@ -375,6 +377,7 @@ def run_experiment(
 
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--preset", choices=["factorial", "density_threshold"], default="factorial")
     parser.add_argument("--density-levels", default=",".join(DENSITY_LEVELS))
     parser.add_argument("--separability-levels", default=",".join(SEPARABILITY_LEVELS))
     parser.add_argument("--minority-covs", default=None)
@@ -389,6 +392,13 @@ def main() -> None:
         default=ROOT / "results" / "topology" / "density_separability_factorial.csv",
     )
     args = parser.parse_args()
+    minority_covs = parse_float_list(args.minority_covs) if args.minority_covs else None
+    centroid_distances = parse_float_list(args.centroid_distances) if args.centroid_distances else None
+    if args.preset == "density_threshold":
+        if minority_covs is None:
+            minority_covs = DENSITY_THRESHOLD_COVS
+        if centroid_distances is None:
+            centroid_distances = DENSITY_THRESHOLD_DISTANCES
     output = run_experiment(
         density_levels=parse_list(args.density_levels),
         separability_levels=parse_list(args.separability_levels),
@@ -397,8 +407,8 @@ def main() -> None:
         skew_ratio=args.skew_ratio,
         minority_count=args.minority_count,
         output_path=args.output,
-        minority_covs=parse_float_list(args.minority_covs) if args.minority_covs else None,
-        centroid_distances=parse_float_list(args.centroid_distances) if args.centroid_distances else None,
+        minority_covs=minority_covs,
+        centroid_distances=centroid_distances,
     )
     print(f"wrote {output}")
 

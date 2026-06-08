@@ -50,6 +50,14 @@ def _markdown_table(df: pd.DataFrame, floatfmt: str = ".4f") -> str:
     return "\n".join(lines)
 
 
+def _safe_corr(a: pd.Series | np.ndarray, b: pd.Series | np.ndarray) -> float:
+    x = np.asarray(a, dtype=float)
+    y = np.asarray(b, dtype=float)
+    if x.size < 2 or y.size < 2 or float(np.std(x)) == 0.0 or float(np.std(y)) == 0.0:
+        return 0.0
+    return float(np.corrcoef(x, y)[0, 1])
+
+
 def _label(prefix: str, value: float) -> str:
     precision = 2 if prefix == "cov" else 1
     return f"{prefix}_{float(value):.{precision}f}".replace("-", "neg_").replace(".", "_")
@@ -95,7 +103,7 @@ def factor_effects(df: pd.DataFrame) -> pd.DataFrame:
                 {
                     "outcome": outcome,
                     "predictor": predictor,
-                    "correlation": float(featured[predictor].corr(featured[outcome])),
+                    "correlation": _safe_corr(featured[predictor], featured[outcome]),
                 }
             )
     return pd.DataFrame(rows)
@@ -111,10 +119,72 @@ def correlation_table(df: pd.DataFrame) -> pd.DataFrame:
                 {
                     "predictor": predictor,
                     "outcome": outcome,
-                    "correlation": float(featured[source].corr(featured[outcome])),
+                    "correlation": _safe_corr(featured[source], featured[outcome]),
                 }
             )
     return pd.DataFrame(rows)
+
+
+def density_derivative_estimates(df: pd.DataFrame) -> pd.DataFrame:
+    df = normalize_columns(df)
+    means = (
+        df.groupby(["centroid_distance", "model_id", "minority_cov"], as_index=False)[CURVE_METRICS]
+        .mean()
+        .sort_values(["centroid_distance", "model_id", "minority_cov"])
+    )
+    rows = []
+    for (centroid_distance, model_id), group in means.groupby(["centroid_distance", "model_id"]):
+        group = group.sort_values("minority_cov")
+        covs = group["minority_cov"].to_numpy(dtype=float)
+        if covs.size < 2:
+            continue
+        for metric in CURVE_METRICS:
+            values = group[metric].to_numpy(dtype=float)
+            deltas = np.diff(values)
+            dcovs = np.diff(covs)
+            for idx, derivative in enumerate(deltas / dcovs):
+                rows.append(
+                    {
+                        "centroid_distance": float(centroid_distance),
+                        "model_id": model_id,
+                        "metric": metric,
+                        "cov_from": float(covs[idx]),
+                        "cov_to": float(covs[idx + 1]),
+                        "delta": float(deltas[idx]),
+                        "derivative": float(derivative),
+                        "abs_derivative": float(abs(derivative)),
+                    }
+                )
+    return pd.DataFrame(rows)
+
+
+def largest_adjacent_density_changes(df: pd.DataFrame) -> pd.DataFrame:
+    derivatives = density_derivative_estimates(df)
+    if derivatives.empty:
+        return derivatives
+    rows = []
+    for metric, group in derivatives.groupby("metric"):
+        row = group.sort_values("abs_derivative", ascending=False).iloc[0]
+        rows.append(row.to_dict())
+    return pd.DataFrame(rows)[["metric", "centroid_distance", "model_id", "cov_from", "cov_to", "delta", "derivative", "abs_derivative"]]
+
+
+def candidate_threshold_regions(df: pd.DataFrame) -> pd.DataFrame:
+    derivatives = density_derivative_estimates(df)
+    if derivatives.empty:
+        return derivatives
+    rows = []
+    for metric, group in derivatives.groupby("metric"):
+        cutoff = float(group["abs_derivative"].quantile(0.90))
+        candidates = group[group["abs_derivative"] >= cutoff].copy()
+        candidates["threshold_reason"] = "top_10pct_abs_density_derivative"
+        rows.append(candidates)
+    if not rows:
+        return pd.DataFrame()
+    out = pd.concat(rows, ignore_index=True)
+    return out.sort_values(["metric", "abs_derivative"], ascending=[True, False])[
+        ["metric", "centroid_distance", "model_id", "cov_from", "cov_to", "delta", "derivative", "abs_derivative", "threshold_reason"]
+    ]
 
 
 def dropout_benefit(df: pd.DataFrame) -> pd.DataFrame:
@@ -206,6 +276,15 @@ def build_density_separability_report(df: pd.DataFrame) -> str:
         "",
         "## Continuous Factor Correlations",
         _markdown_table(correlation_table(df)),
+        "",
+        "## First Derivative Estimates",
+        _markdown_table(density_derivative_estimates(df)),
+        "",
+        "## Largest Adjacent Density Changes",
+        _markdown_table(largest_adjacent_density_changes(df)),
+        "",
+        "## Candidate Accessibility Threshold Regions",
+        _markdown_table(candidate_threshold_regions(df)),
         "",
         "## Dropout Benefit",
         _markdown_table(dropout_benefit(df)),

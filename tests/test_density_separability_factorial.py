@@ -104,6 +104,13 @@ def test_numeric_grid_construction_and_parsing():
     assert {row["separability_label"] for row in grid} == {"dist_4_0", "dist_0_5"}
 
 
+def test_density_threshold_preset_values():
+    module = _load_run_module()
+
+    assert module.DENSITY_THRESHOLD_COVS == [0.05, 0.10, 0.15, 0.20, 0.25, 0.30, 0.35, 0.40, 0.50, 0.60, 0.80, 1.00, 1.20, 1.60]
+    assert module.DENSITY_THRESHOLD_DISTANCES == [0.5, 1.0, 2.0, 4.0]
+
+
 def test_categorical_grid_backward_compatibility():
     module = _load_run_module()
 
@@ -182,6 +189,19 @@ def test_factor_interaction_feature_construction():
     assert featured["density_x_separability"].iloc[0] == featured["minority_cov"].iloc[0] * featured["centroid_distance"].iloc[0]
 
 
+def test_density_derivative_and_threshold_diagnostics():
+    module = _load_report_module()
+
+    derivatives = module.density_derivative_estimates(_tiny_df())
+    largest = module.largest_adjacent_density_changes(_tiny_df())
+    candidates = module.candidate_threshold_regions(_tiny_df())
+
+    assert not derivatives.empty
+    assert {"cov_from", "cov_to", "derivative", "abs_derivative"}.issubset(derivatives.columns)
+    assert set(largest["metric"]) == {"minority_survival_auc", "minority_survival_cliffiness", "breadth", "elevation"}
+    assert not candidates.empty
+
+
 def test_report_generation_on_tiny_csv(tmp_path):
     module = _load_report_module()
     input_path = tmp_path / "tiny.csv"
@@ -193,6 +213,9 @@ def test_report_generation_on_tiny_csv(tmp_path):
 
     assert "## Factor Effects" in report
     assert "## Continuous Factor Correlations" in report
+    assert "## First Derivative Estimates" in report
+    assert "## Largest Adjacent Density Changes" in report
+    assert "## Candidate Accessibility Threshold Regions" in report
     assert "Does density independently affect elevation?" in report
     assert len(paths) == 8
     for path in paths:
