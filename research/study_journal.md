@@ -1913,3 +1913,273 @@ and learning objectives appear to navigate this morphology space along different
 ## Density appears first-order, but fragmentation remains unresolved.
 
 Current evidence supports density as the dominant accessibility axis, but the synthetic construction still allows density, support volume, and fragmentation to be partially entangled. The next test should hold local density/separability approximately fixed while varying the number of minority islands.
+
+
+
+
+# Research Log Entry: Density Thresholds and Morphology Coordinates
+
+## Date
+
+2026-06-10
+
+## Context
+
+After the initial accessibility manuscript stabilized, Paper 2 exploration shifted toward understanding the mechanisms that produce accessibility morphology under severe class imbalance.
+
+Prior experiments suggested that accessibility is not explained by ranking metrics alone and that allocation morphology may be governed by internal structural variables such as breadth, elevation, density, fragmentation, and local ambiguity.
+
+This entry records the first strong evidence that accessibility may undergo a density-mediated transition in morphology space.
+
+---
+
+## Experiment
+
+Dense density × separability threshold sweep.
+
+### Design
+
+The experiment varied:
+
+* minority covariance as a proxy for local minority information density,
+* centroid distance as a proxy for separability,
+* model objective/perturbation:
+
+  * `mlp_weighted_bce`
+  * `mlp_weighted_bce_dropout_0_1`
+
+Global imbalance was held fixed.
+
+### Density Grid
+
+```text
+0.05, 0.10, 0.15, 0.20, 0.25, 0.30, 0.35, 0.40, 0.50, 0.60, 0.80, 1.00, 1.20, 1.60
+```
+
+### Separability Grid
+
+```text
+0.5, 1.0, 2.0, 4.0
+```
+
+### Core Metrics
+
+Accessibility:
+
+* minority survival AUC
+* minority survival cliffiness
+
+Morphology:
+
+* breadth
+* elevation
+
+Conventional:
+
+* AUROC
+* average precision
+
+---
+
+## Main Observations
+
+### 1. Density is the dominant accessibility axis
+
+As minority covariance increased, accessibility degraded substantially.
+
+Empirically:
+
+* breadth increased strongly with minority covariance,
+* elevation decreased strongly with minority covariance,
+* minority survival AUC decreased strongly with minority covariance,
+* cliffiness increased and then saturated.
+
+This supports the interpretation that minority density is a first-order control variable for accessibility morphology.
+
+---
+
+### 2. Separability is secondary but real
+
+Increasing centroid distance improved survival and elevation, and reduced breadth/cliffiness.
+
+However, separability appeared weaker than density.
+
+Interpretation:
+
+* density controls whether minority support remains compact and accessible,
+* separability helps retain elevation once density begins to degrade.
+
+---
+
+### 3. Accessibility collapse appears threshold-like
+
+The density curves do not look purely linear.
+
+There appears to be a transition region where morphology changes rapidly:
+
+```text
+roughly between minority_cov ≈ 0.20 and 0.80
+```
+
+Below this region:
+
+```text
+survival AUC ≈ 1
+elevation ≈ 1
+breadth ≈ 0
+cliffiness ≈ 0
+```
+
+Within the transition region:
+
+```text
+survival AUC declines rapidly
+elevation declines
+breadth expands
+cliffiness rises sharply
+```
+
+Beyond the transition region:
+
+```text
+survival AUC enters a degraded regime
+elevation remains low
+breadth remains high
+cliffiness remains elevated
+```
+
+This suggests accessibility may exhibit a density-mediated phase transition.
+
+---
+
+## Morphology Interpretation
+
+The experiment suggests that accessibility can be represented as movement through a morphology space defined by:
+
+```text
+breadth = spread of positive score allocation
+elevation = concentration of positive mass at high accessibility
+```
+
+The observed trajectory is approximately:
+
+```text
+high density:
+    low breadth
+    high elevation
+    high survival
+    low cliffiness
+
+transition density:
+    increasing breadth
+    falling elevation
+    falling survival
+    rising cliffiness
+
+low density:
+    high breadth
+    low elevation
+    degraded survival
+    elevated cliffiness
+```
+
+This is one of the clearest empirical demonstrations so far that breadth and elevation may be fundamental accessibility coordinates.
+
+---
+
+## Relationship to Fragmentation Sweep
+
+A separate fragmentation sweep suggested that fragmentation has a smaller effect on survival AUC and elevation than density, but can increase cliffiness and breadth.
+
+This implies a possible hierarchy:
+
+```text
+density controls accessibility level
+fragmentation controls accessibility instability
+separability moderates elevation retention
+```
+
+Stated differently:
+
+```text
+density determines whether minority support is accessible at all,
+fragmentation affects how stable that accessibility is,
+separability affects how much elevation can be retained.
+```
+
+---
+
+## Dropout Observation
+
+Feature dropout did not behave as a simple accessibility-improving regularizer in this setting.
+
+Instead, dropout tended to:
+
+* increase breadth,
+* decrease elevation,
+* reduce survival AUC in many low-density regimes,
+* sometimes reduce cliffiness.
+
+This suggests dropout acts as a morphology perturbation rather than a uniformly beneficial intervention.
+
+In this experiment, dropout often looked like a fragmentation or diffusion operator in morphology space.
+
+---
+
+## Emerging Hypothesis
+
+Accessibility may be governed by a low-dimensional morphology state.
+
+A candidate state representation is:
+
+```text
+M = (breadth, elevation)
+```
+
+where:
+
+```text
+elevation predicts accessibility level
+breadth predicts accessibility instability / cliffiness
+```
+
+The next critical test is whether survival AUC and cliffiness can be predicted from breadth and elevation across multiple experiment families.
+
+If so, breadth and elevation may be treated as operational state variables of accessibility.
+
+---
+
+## Working Claim
+
+A tentative paper-facing statement:
+
+> Accessibility failure under severe imbalance appears to undergo a density-mediated transition. As minority support becomes diffuse, positive score allocation moves from a compact high-elevation regime into a high-breadth, low-elevation regime, accompanied by survival degradation and increased cliffiness. Separability moderates this transition, while fragmentation appears to primarily affect instability rather than accessibility level.
+
+---
+
+## Open Questions
+
+1. Is the density transition robust across model families beyond weighted BCE MLP variants?
+2. Can breadth and elevation predict survival AUC across density, fragmentation, dropout, and objective perturbation experiments?
+3. Does the transition persist under real enterprise rare-event datasets?
+4. Is breadth/elevation morphology a sufficient state representation, or are additional axes needed?
+5. Can this framework be connected to information density, support estimation, or selective prediction theory?
+
+---
+
+## Next Experiment
+
+Run a ridge extraction experiment:
+
+```text
+Can survival AUC and cliffiness be predicted from breadth and elevation alone?
+```
+
+The analysis should pool rows from:
+
+* density threshold sweep,
+* fragmentation sweep,
+* weighted dropout sweep,
+* objective/topology allocation experiments if available.
+
+If breadth/elevation explain accessibility outcomes across experiment families, then allocation morphology becomes a unifying framework rather than a dataset-specific descriptive artifact.
