@@ -2183,3 +2183,367 @@ The analysis should pool rows from:
 * objective/topology allocation experiments if available.
 
 If breadth/elevation explain accessibility outcomes across experiment families, then allocation morphology becomes a unifying framework rather than a dataset-specific descriptive artifact.
+
+# Morphology Ridge Extraction: Accessibility Appears One-Dimensional, Cliffiness Requires Additional State
+
+## Date
+
+June 2026
+
+## Context
+
+A recurring hypothesis throughout the accessibility program has been that many apparently different interventions—density changes, separability changes, objective modifications, dropout, topology perturbations, and training trajectory effects—may ultimately be acting through a smaller set of latent accessibility state variables.
+
+To investigate this possibility, a ridge extraction analysis was performed using the accumulated experimental corpus:
+
+* Density Threshold Sweep
+* Density × Separability Factorial
+* Fragmentation Sweep
+* Weighted Dropout Sweep
+* MLP Objectives + Topology
+* Allocation Trajectory Experiments
+
+The goal was to determine whether the proposed morphology coordinates (breadth, elevation) could explain accessibility outcomes across experiment families.
+
+---
+
+## Result 1: Accessibility Collapses onto Morphology
+
+A morphology-only model using breadth and elevation predicted minority survival AUC with surprisingly high accuracy:
+
+* Morphology-only CV R² = 0.858
+* Morphology + conventional metrics CV R² = 0.887
+
+This performance generalized across experiment families despite substantial differences in how the underlying datasets were generated.
+
+The implication is that many seemingly distinct perturbations may primarily affect accessibility through their movement in morphology space.
+
+Conceptually:
+
+Density
+Separability
+Dropout
+Objectives
+Fragmentation
+Training Trajectory
+
+→ Morphology State
+
+→ Accessibility
+
+rather than each perturbation directly determining accessibility.
+
+---
+
+## Result 2: Morphology Appears Nearly One-Dimensional
+
+Several diagnostics suggest breadth and elevation lie on a common latent manifold.
+
+Observed:
+
+* Breadth/Elevation Correlation = -0.860
+* PC1 Explained Variance = 0.930
+
+Thus approximately 93% of morphology variation can be described by a single principal direction.
+
+This suggests accessibility may largely evolve along a dominant accessibility ridge rather than occupying a genuinely two-dimensional state space.
+
+Operationally:
+
+Low Breadth / High Elevation
+→ concentrated accessibility
+
+High Breadth / Low Elevation
+→ distributed accessibility
+
+with most observed models moving along this tradeoff curve.
+
+---
+
+## Result 3: Cliffiness Is Not Morphology
+
+The strongest negative result is also the most informative.
+
+Morphology failed to predict minority survival cliffiness:
+
+* Morphology-only CV R² = -0.184
+
+while successfully predicting accessibility level.
+
+This implies:
+
+Accessibility Level
+≈ Morphology
+
+but
+
+Accessibility Dynamics
+≠ Morphology
+
+and requires additional state.
+
+The morphology coordinates capture where accessibility exists.
+
+They do not capture how accessibility disappears as thresholds tighten.
+
+---
+
+## Result 4: Fragmentation Is the Largest Residual Family
+
+The largest cliffiness residuals were associated with fragmentation experiments.
+
+This is notable because fragmentation directly manipulates minority topology while approximately preserving overall density.
+
+This observation suggests that topology contributes information not represented by breadth or elevation.
+
+A provisional decomposition is:
+
+Accessibility Level
+= f(Morphology)
+
+Accessibility Dynamics
+= f(Morphology, Topology)
+
+where topology includes quantities such as:
+
+* Number of minority islands
+* Largest connected component fraction
+* Island entropy
+* Positive isolation rate
+* Component-size inequality
+
+---
+
+## Interpretation
+
+The ridge extraction supports a new working hypothesis:
+
+Morphology is the state space of accessibility.
+
+Topology is the state space of accessibility dynamics.
+
+If true, accessibility theory may naturally separate into:
+
+1. Morphology
+
+   * Breadth
+   * Elevation
+
+2. Topology
+
+   * Connectivity
+   * Fragmentation
+   * Reachability structure
+
+This provides a coherent explanation for why density, dropout, objectives, fragmentation, and training progression often produce similar accessibility outcomes despite very different mechanisms.
+
+They may simply move models through a shared morphology manifold.
+
+---
+
+## Next Experiment
+
+Topology-Augmented Morphology
+
+Test whether adding topology coordinates can explain cliffiness residuals.
+
+Candidate topology variables:
+
+* n_islands
+* largest_island_fraction
+* island_entropy
+* component_gini
+* isolated_positive_fraction
+
+Evaluate:
+
+survival_auc ~ morphology
+
+cliffiness ~ morphology + topology
+
+A substantial improvement in cliffiness prediction would support the hypothesis that topology constitutes the missing accessibility state variable.
+
+
+## Date 6/12/2026
+
+Ridge/edge extraction on generating-parameter surfaces failed to explain accessibility dynamics. However, diagnostics suggest the extracted features were largely determined by grid construction and finite-difference artifacts. This experiment should not be interpreted as evidence against local-geometry explanations of cliffiness.
+
+The failure of ridge extraction and topology augmentation appears to have been caused by model misspecification rather than lack of structure. Kernel smoothing reveals that cliffiness is highly predictable from morphology coordinates alone (CV R² ≈ 0.91), suggesting that accessibility dynamics are encoded as nonlinear geometry on the morphology manifold rather than requiring an additional state variable. Different experimental perturbations appear to trace distinct arcs across a common manifold.
+
+The accessibility manifold is not a universal scalar coordinate. 
+It is scalar-like for accessibility level, but two-dimensional and nonlinear for accessibility dynamics.
+
+
+## Date 6/18/2026
+
+Research Journal Entry
+Accessibility Research Journal
+Morphology Regimes Emerge as the Primary Explanatory Structure
+
+Since the previous journal entry, the research program shifted from establishing the existence of accessibility morphology to identifying the underlying structure governing cliffiness behavior.
+
+The initial objective was to determine whether cliffiness could be explained by a compact global equation derived from allocator morphology. Several competing hypotheses were explored.
+
+Kernel Robustness
+
+A kernel-based morphology model was subjected to extensive bandwidth sensitivity analysis.
+
+Results showed:
+
+Nonlinear morphology models consistently outperformed linear alternatives.
+Performance remained stable across a wide range of RBF bandwidths.
+Improvement was observed under grouped validation schemes rather than only random cross-validation.
+Source-family holdout remained challenging, suggesting that extrapolation across allocator families is harder than interpolation within known families.
+
+This established that the morphology signal is genuine and not an artifact of a particular kernel setting.
+
+Conclusion
+
+Cliffiness is robustly nonlinear with respect to morphology.
+
+Morphology Equation Discovery
+
+The next objective was to discover an explicit equation linking morphology coordinates to cliffiness.
+
+Models examined:
+
+linear terms
+polynomial terms
+log transforms
+interaction terms
+kernel regressors
+random forests
+
+The strongest compact equation obtained was:
+
+log(breadth) + breadth + breadth² × elevation
+
+with grouped CV performance around:
+
+R² ≈ 0.60
+
+Nonlinear machine learning models achieved higher performance:
+
+R² ≈ 0.68–0.74
+
+suggesting that a simple closed-form equation captures substantial but not complete structure.
+
+Conclusion
+
+Cliffiness is partially expressible through a compact nonlinear morphology equation, but significant residual structure remains.
+
+Frontier Geometry Investigation
+
+A competing theory proposed that cliffiness might primarily reflect distance from the feasible morphology frontier.
+
+Several frontier-derived quantities were constructed:
+
+frontier distance
+normalized frontier position
+frontier curvature
+frontier width
+vertical slack
+
+Results were largely negative.
+
+Frontier-only models produced negative grouped CV R² values.
+
+Adding frontier quantities to morphology yielded only modest improvements.
+
+Conclusion
+
+Cliffiness is not primarily explained by distance to the morphology frontier.
+
+Frontier geometry may contribute secondary signal but does not appear to be the organizing principle.
+
+Morphology Atlas Construction
+
+Attention then shifted from continuous equations toward discrete structure.
+
+A morphology atlas was constructed using unsupervised clustering.
+
+Key findings:
+
+Clusters were reasonably stable across algorithms.
+Between-cluster cliffiness variance greatly exceeded within-cluster variance.
+Cluster identity strongly predicted cliffiness buckets.
+Atlas clusters corresponded to recognizable regions of morphology space.
+
+The resulting evidence suggested that allocator morphology may exhibit phase-like behavior rather than forming a smooth continuum.
+
+Conclusion
+
+Discrete morphology regimes appear to exist.
+
+Regime Consolidation
+
+The 14-cluster atlas was compressed into higher-level macro-regimes.
+
+A four-regime solution preserved most predictive power while dramatically simplifying interpretation.
+
+The resulting regimes were approximately:
+
+Quantized Floor
+low breadth
+low elevation
+low cliffiness
+
+Associated with strongly quantized allocators.
+
+Elevated Broad Plateau
+high breadth
+elevated survival
+moderate cliffiness
+
+Associated with broad, resilient allocators.
+
+Broad-Flat High-Cliff Basin
+high breadth
+low elevation
+high cliffiness
+
+Associated with allocators exhibiting strong accessibility collapse.
+
+Transitional / Mixed Region
+boundary region between major phases
+includes several near-zero-cliffiness substructures
+
+Most importantly:
+
+Global equations performed substantially worse than equations fitted within regimes.
+
+This indicates that cliffiness is easier to explain locally than globally.
+
+Conclusion
+
+The strongest current theory is:
+
+global cliffiness
+    =
+morphology regime selection
+    +
+simple local regime equation
+
+This explanation outperformed:
+
+linear morphology theory
+global equation theory
+frontier-distance theory
+
+and remained consistent across multiple independent analyses.
+
+Current Scientific Position
+
+The research program has now moved from discovery into explanation.
+
+The central question is no longer:
+
+What causes cliffiness?
+
+Instead it has become:
+
+Why do these morphology regimes exist?
+
+This represents a substantial maturation of the theory.
+
+Current evidence suggests that accessibility behavior is governed by a small number of morphology phases, with cliffiness emerging from local dynamics within those phases rather than from a single global law.
