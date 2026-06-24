@@ -62,6 +62,20 @@ def test_evaluate_k_and_compression():
     assert "cluster_id" in set(compression["representation"])
 
 
+def test_within_regime_equations_include_cv_scores():
+    module = _load_module()
+    df = pd.DataFrame(_atlas_rows())
+    centroids = module.cluster_centroids(df)
+    _, assignments = module.evaluate_k_range(df, centroids, k_values=range(2, 4))
+
+    scores = module.within_regime_equations(df, assignments[3])
+    summary = module.equation_summary_table(scores)
+
+    assert "ridge_cv_r2" in scores["global"]
+    assert "small_rf_cv_r2" in summary.columns
+    assert len(summary) >= 2
+
+
 def test_report_generation(tmp_path):
     module = _load_module()
     atlas = tmp_path / "morphology_atlas_clusters.csv"
@@ -71,6 +85,7 @@ def test_report_generation(tmp_path):
 
     names = {path.name for path in outputs}
     assert "morphology_regime_consolidation.md" in names
+    assert "within_regime_equation_scores.json" in names
     assert "cluster_distance_heatmap.png" in names
     assert "cluster_dendrogram.png" in names
     assert "regime_compression_curve.png" in names

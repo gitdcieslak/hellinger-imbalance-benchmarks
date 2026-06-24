@@ -31,6 +31,27 @@ def _ecdf_points(values: np.ndarray, max_points: int = 200) -> list[dict[str, fl
     return [{"x": float(x), "y": float(v)} for x, v in zip(arr, y, strict=False)]
 
 
+def empirical_reachability_curve(
+    y_true: np.ndarray,
+    y_score: np.ndarray,
+    thresholds: list[float] | np.ndarray,
+) -> list[dict[str, float]]:
+    """Return positive-class empirical reachability over a threshold grid."""
+
+    y = np.asarray(y_true, dtype=int)
+    s = np.clip(np.asarray(y_score, dtype=float), 0.0, 1.0)
+    th = np.asarray(thresholds, dtype=float)
+    if y.size == 0 or s.size == 0 or y.size != s.size:
+        raise ValueError("y_true and y_score must be non-empty and aligned")
+    pos = s[y == 1]
+    if pos.size == 0:
+        raise ValueError("positive class scores are required")
+    return [
+        {"threshold": float(t), "minority_reachability": float(np.mean(pos >= float(t)))}
+        for t in th
+    ]
+
+
 def compute_occupancy_metrics(
     y_true: np.ndarray,
     y_score: np.ndarray,
@@ -68,11 +89,13 @@ def compute_occupancy_metrics(
     unique_ratio = float(np.unique(np.round(s, 6)).size / float(s.size))
     quantization_score = float(max(0.0, min(1.0, 1.0 - unique_ratio)))
 
+    reachability_curve = empirical_reachability_curve(y, s, thresholds)
     occupancy_traj: list[dict[str, float]] = []
     pos_survival: list[float] = []
-    for threshold in thresholds:
+    for item in reachability_curve:
+        threshold = item["threshold"]
         th = float(threshold)
-        pos_above = float(np.mean(pos >= th))
+        pos_above = float(item["minority_reachability"])
         neg_above = float(np.mean(neg >= th))
         occupancy_traj.append(
             {

@@ -2547,3 +2547,118 @@ Why do these morphology regimes exist?
 This represents a substantial maturation of the theory.
 
 Current evidence suggests that accessibility behavior is governed by a small number of morphology phases, with cliffiness emerging from local dynamics within those phases rather than from a single global law.
+
+# Research Journal — Accessibility Dynamics Emerges
+
+## Date 6/23/2026
+
+
+Today felt like a genuine turning point in the accessibility research program.
+
+The early phase of this work was dominated by a simple question:
+
+> Is accessibility real?
+
+Paper 1 largely answered that question.
+
+Across multiple model families, accessibility behaved as a distinct property not captured by ranking metrics, calibration metrics, or conventional performance measures. Models with similar AUROC, AP, and calibration could exhibit dramatically different threshold-mediated minority reachability.
+
+That alone was an interesting observation.
+
+The challenge for Paper 2 became understanding why.
+
+Over the past several months, we explored a long sequence of hypotheses:
+
+* Accessibility topology
+* Accessibility capacity
+* Quantization
+* Support granularity
+* Support construction
+* Accessibility regimes
+* Accessibility coordinates
+* Occupancy and family structure
+
+Many of these hypotheses failed in their strongest form.
+
+At first this felt disappointing.
+
+In retrospect, these failures were productive.
+
+Support granularity collapsed into capacity.
+
+Support construction largely compressed geometry rather than replacing it.
+
+Simple quantized vs continuous regimes explained very little.
+
+Accessibility coordinates remained strongly family structured.
+
+Every failed hypothesis removed a possible explanation and narrowed the search space.
+
+What remained was a surprisingly consistent picture:
+
+Accessibility behaves less like a discrete property and more like a geometry.
+
+Coordinates emerged as the most useful abstraction.
+
+Models occupied coherent regions.
+
+Nearby points exhibited similar morphology.
+
+Distances in coordinate space correlated with morphology differences.
+
+Accessibility increasingly looked like a state space.
+
+The most surprising development came from the intervention work.
+
+Initially the intervention vector hypothesis was blocked because no paired before/after intervention records existed.
+
+After implementing paired intervention capture, we were able to recover 625 real intervention vectors corresponding to the CART → Random Forest transition.
+
+The results were far stronger than expected.
+
+The intervention vectors displayed:
+
+* Mean cosine similarity ≈ 0.93
+* Angular dispersion ≈ 0.07
+* Strong cross-dataset stability
+* Δcoordinate → Δcliffiness prediction R² ≈ 0.91
+
+This is qualitatively different from previous results.
+
+Previous results established structure.
+
+This result suggests dynamics.
+
+The coordinate system is no longer acting solely as a descriptive embedding.
+
+It appears to capture predictable model movement.
+
+The current evidence suggests:
+
+Accessibility is a manifold.
+
+Model families occupy regions of that manifold.
+
+Interventions induce movement through that manifold.
+
+Accessibility outcomes change as a consequence of that movement.
+
+If these findings continue to hold, the central claim of Paper 2 may become:
+
+> Accessibility coordinates do not merely summarize accessibility morphology. They define a state space in which model interventions induce predictable accessibility dynamics.
+
+The next question is no longer whether accessibility has structure.
+
+The next question is:
+
+> What is the geometry of intervention flow?
+
+Is bagging represented by a single global displacement vector?
+
+Or does the direction and magnitude of bagging depend on where a model begins in accessibility space?
+
+If intervention effects vary by location, accessibility may be better understood as a vector field than a fixed transformation.
+
+That possibility feels particularly exciting because it would move the research program from describing accessibility to modeling accessibility dynamics.
+
+For the first time, the research agenda feels less like a collection of disconnected empirical findings and more like a coherent theory beginning to emerge.

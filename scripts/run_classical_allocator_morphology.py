@@ -15,12 +15,14 @@ from sklearn.preprocessing import StandardScaler
 
 ROOT = Path(__file__).resolve().parents[1]
 SRC = ROOT / "src"
-if str(SRC) not in sys.path:
-    sys.path.insert(0, str(SRC))
+sys.path.insert(0, str(SRC))
+for module_name in list(sys.modules):
+    if module_name == "hib" or module_name.startswith("hib."):
+        del sys.modules[module_name]
 
 from hib.allocation_shape import positive_score_allocation_shape_metrics  # noqa: E402
 from hib.models import MODEL_REGISTRY, OptionalDependencyUnavailable, make_model  # noqa: E402
-from hib.occupancy import compute_occupancy_metrics  # noqa: E402
+from hib.occupancy import compute_occupancy_metrics, empirical_reachability_curve  # noqa: E402
 from hib.synthetic import SyntheticSkewConfig, make_train_test_split  # noqa: E402
 
 
@@ -28,6 +30,7 @@ DEFAULT_MODELS = ["cart", "hddt", "bagged_hddt", "random_forest", "xgboost", "li
 DEFAULT_SKEWS = [25, 100, 500, 1000]
 DEFAULT_SEEDS = list(range(20))
 THRESHOLDS = [0.50, 0.25, 0.10, 0.05, 0.01]
+REACHABILITY_THRESHOLDS = np.linspace(0.0, 1.0, 101).tolist()
 METRIC_COLUMNS = [
     "auroc",
     "average_precision",
@@ -49,6 +52,7 @@ METRIC_COLUMNS = [
     "positive_score_q10_q90_width",
 ]
 OUTPUT_COLUMNS = ["model_id", "seed", "skew_ratio", "minority_count", "fit_failed", "failure_reason", *METRIC_COLUMNS]
+REACHABILITY_COLUMNS = ["run_id", "dataset_id", "task_id", "model_id", "seed", "threshold", "minority_reachability", "minority_survival_auc", "minority_survival_cliffiness", "breadth", "elevation"]
 
 
 def parse_int_list(value: str) -> list[int]:
@@ -140,6 +144,27 @@ def build_result_row(model_id: str, seed: int, skew_ratio: int, minority_count: 
     }
 
 
+def build_reachability_rows(row: dict[str, Any], y_true: np.ndarray, y_score: np.ndarray, thresholds: list[float] = REACHABILITY_THRESHOLDS) -> list[dict[str, Any]]:
+    run_id = f"classical|skew={row['skew_ratio']}|model={row['model_id']}|seed={row['seed']}"
+    task_id = f"synthetic_skew_{row['skew_ratio']}"
+    return [
+        {
+            "run_id": run_id,
+            "dataset_id": "synthetic_severe_skew",
+            "task_id": task_id,
+            "model_id": row["model_id"],
+            "seed": int(row["seed"]),
+            "threshold": point["threshold"],
+            "minority_reachability": point["minority_reachability"],
+            "minority_survival_auc": row.get("minority_survival_auc", np.nan),
+            "minority_survival_cliffiness": row.get("minority_survival_cliffiness", np.nan),
+            "breadth": row.get("breadth", np.nan),
+            "elevation": row.get("elevation", np.nan),
+        }
+        for point in empirical_reachability_curve(y_true, y_score, thresholds)
+    ]
+
+
 def failed_result_row(model_id: str, seed: int, skew_ratio: int, minority_count: int, reason: str) -> dict[str, Any]:
     row: dict[str, Any] = {
         "model_id": model_id,
@@ -162,6 +187,18 @@ def run_one(model_id: str, seed: int, skew_ratio: int, minority_count: int, test
         return build_result_row(model_id, seed, skew_ratio, minority_count, y_test, y_score)
     except Exception as exc:
         return failed_result_row(model_id, seed, skew_ratio, minority_count, f"{type(exc).__name__}: {exc}\n{traceback.format_exc(limit=3)}")
+
+
+def run_one_with_reachability(model_id: str, seed: int, skew_ratio: int, minority_count: int, test_size: float = 0.5) -> tuple[dict[str, Any], list[dict[str, Any]]]:
+    try:
+        X_train, X_test, y_train, y_test = prepare_split(seed, skew_ratio, minority_count, test_size=test_size)
+        model = make_model(model_id, seed)
+        model.fit(X_train, y_train)
+        y_score = _positive_class_scores(model, X_test)
+        row = build_result_row(model_id, seed, skew_ratio, minority_count, y_test, y_score)
+        return row, build_reachability_rows(row, y_test, y_score)
+    except Exception as exc:
+        return failed_result_row(model_id, seed, skew_ratio, minority_count, f"{type(exc).__name__}: {exc}\n{traceback.format_exc(limit=3)}"), []
 
 
 def write_results(rows: list[dict[str, Any]], output: Path) -> Path:
@@ -197,6 +234,20 @@ def append_result_row(row: dict[str, Any], output: Path) -> None:
         handle.flush()
 
 
+def append_reachability_rows(rows: list[dict[str, Any]], output: Path) -> None:
+    if not rows:
+        return
+    output.parent.mkdir(parents=True, exist_ok=True)
+    exists = output.exists()
+    with output.open("a", newline="", encoding="utf-8") as handle:
+        writer = csv.DictWriter(handle, fieldnames=REACHABILITY_COLUMNS)
+        if not exists:
+            writer.writeheader()
+        for row in rows:
+            writer.writerow({column: row.get(column, np.nan) for column in REACHABILITY_COLUMNS})
+        handle.flush()
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--models", type=parse_model_list, default=DEFAULT_MODELS)
@@ -206,6 +257,7 @@ def main() -> None:
     parser.add_argument("--test-size", type=float, default=0.5)
     parser.add_argument("--output", type=Path, default=ROOT / "results" / "topology" / "classical_allocator_morphology.csv")
     parser.add_argument("--resume", action="store_true", help="Skip rows already present in the output CSV and append new rows.")
+    parser.add_argument("--save-reachability-curves", type=Path, default=None)
     args = parser.parse_args()
 
     available, missing = resolve_model_availability(args.models)
@@ -213,6 +265,11 @@ def main() -> None:
         print(f"skipping {model_id}: {reason}")
 
     done = completed_keys(args.output) if args.resume else set()
+    if not args.resume:
+        if args.output.exists():
+            args.output.unlink()
+        if args.save_reachability_curves is not None and args.save_reachability_curves.exists():
+            args.save_reachability_curves.unlink()
     rows_written = 0
     for model_id in available:
         for skew_ratio in args.skew_ratios:
@@ -221,13 +278,21 @@ def main() -> None:
                 if key in done:
                     print(f"skip: model={model_id} skew={skew_ratio} seed={seed}")
                     continue
-                row = run_one(model_id, seed, skew_ratio, args.minority_count, test_size=args.test_size)
+                if args.save_reachability_curves is None:
+                    row = run_one(model_id, seed, skew_ratio, args.minority_count, test_size=args.test_size)
+                    curve_rows = []
+                else:
+                    row, curve_rows = run_one_with_reachability(model_id, seed, skew_ratio, args.minority_count, test_size=args.test_size)
                 append_result_row(row, args.output)
+                if args.save_reachability_curves is not None:
+                    append_reachability_rows(curve_rows, args.save_reachability_curves)
                 rows_written += 1
                 status = "failed" if row["fit_failed"] else "ok"
                 print(f"{status}: model={model_id} skew={skew_ratio} seed={seed}")
 
     print(f"wrote {args.output} new_rows={rows_written}")
+    if args.save_reachability_curves is not None:
+        print(f"wrote {args.save_reachability_curves}")
 
 
 if __name__ == "__main__":

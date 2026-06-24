@@ -17,10 +17,10 @@ from sklearn.ensemble import RandomForestClassifier, RandomForestRegressor
 from sklearn.linear_model import LogisticRegression, Ridge
 from sklearn.metrics import accuracy_score, davies_bouldin_score, r2_score, silhouette_score
 from sklearn.metrics.pairwise import cosine_similarity
-from sklearn.model_selection import StratifiedKFold, cross_val_predict
+from sklearn.model_selection import KFold, StratifiedKFold, cross_val_predict
 from sklearn.neighbors import NearestNeighbors
+from sklearn.pipeline import make_pipeline
 from sklearn.preprocessing import StandardScaler
-from sklearn.tree import DecisionTreeRegressor
 from sklearn.tree import DecisionTreeRegressor
 
 
@@ -142,6 +142,14 @@ def cv_accuracy(X: pd.DataFrame, y: pd.Series, model) -> float:
     return float(accuracy_score(y, pred))
 
 
+def cv_r2(X: pd.DataFrame, y: pd.Series, model, max_splits: int = 5) -> float:
+    if len(y) < 8 or float(y.var(ddof=0)) <= 0.0:
+        return float("nan")
+    n_splits = max(2, min(max_splits, len(y) // 4))
+    pred = cross_val_predict(model, X, y, cv=KFold(n_splits=n_splits, shuffle=True, random_state=7))
+    return float(r2_score(y, pred))
+
+
 def compression_curve(df: pd.DataFrame, assignments: dict[int, pd.DataFrame]) -> pd.DataFrame:
     y = bucket(df[TARGET])
     baseline = float(y.value_counts(normalize=True).max())
@@ -211,24 +219,52 @@ def predictive_power(df: pd.DataFrame, assignment: pd.DataFrame) -> pd.DataFrame
 
 def within_regime_equations(df: pd.DataFrame, assignment: pd.DataFrame) -> dict[str, dict[str, float]]:
     mapped = df.merge(assignment[["cluster_id", "regime_id"]], left_on=CLUSTER_COL, right_on="cluster_id", how="left")
-    X_global = StandardScaler().fit_transform(mapped[["breadth", "elevation"]])
-    y_global = mapped[TARGET].to_numpy(dtype=float)
-    scores: dict[str, dict[str, float]] = {"global": {"ridge_r2": float(r2_score(y_global, Ridge(alpha=1.0).fit(X_global, y_global).predict(X_global)))}}
+    X_global = mapped[["breadth", "elevation"]]
+    y_global = mapped[TARGET]
+    global_model = make_pipeline(StandardScaler(), Ridge(alpha=1.0))
+    scores: dict[str, dict[str, float]] = {
+        "global": {
+            "n": float(len(mapped)),
+            "ridge_r2": float(r2_score(y_global, global_model.fit(X_global, y_global).predict(X_global))),
+            "ridge_cv_r2": cv_r2(X_global, y_global, make_pipeline(StandardScaler(), Ridge(alpha=1.0))),
+        }
+    }
     for regime_id, group in mapped.groupby("regime_id"):
         if len(group) < 8:
             continue
-        X = StandardScaler().fit_transform(group[["breadth", "elevation"]])
-        y = group[TARGET].to_numpy(dtype=float)
-        ridge = Ridge(alpha=1.0).fit(X, y)
+        X = group[["breadth", "elevation"]]
+        y = group[TARGET]
+        ridge = make_pipeline(StandardScaler(), Ridge(alpha=1.0)).fit(X, y)
         tree = DecisionTreeRegressor(max_depth=3, min_samples_leaf=5, random_state=7).fit(X, y)
         rf = RandomForestRegressor(n_estimators=100, min_samples_leaf=4, random_state=7, n_jobs=1).fit(X, y)
         scores[str(int(regime_id))] = {
             "n": float(len(group)),
             "ridge_r2": float(r2_score(y, ridge.predict(X))),
+            "ridge_cv_r2": cv_r2(X, y, make_pipeline(StandardScaler(), Ridge(alpha=1.0))),
             "shallow_tree_r2": float(r2_score(y, tree.predict(X))),
+            "shallow_tree_cv_r2": cv_r2(X, y, DecisionTreeRegressor(max_depth=3, min_samples_leaf=5, random_state=7)),
             "small_rf_r2": float(r2_score(y, rf.predict(X))),
+            "small_rf_cv_r2": cv_r2(X, y, RandomForestRegressor(n_estimators=100, min_samples_leaf=4, random_state=7, n_jobs=1)),
         }
     return scores
+
+
+def equation_summary_table(scores: dict[str, dict[str, float]]) -> pd.DataFrame:
+    rows = []
+    for regime_id, values in scores.items():
+        row = {"regime_id": regime_id}
+        row.update(values)
+        rows.append(row)
+    columns = ["regime_id", "n", "ridge_r2", "ridge_cv_r2", "shallow_tree_r2", "shallow_tree_cv_r2", "small_rf_r2", "small_rf_cv_r2"]
+    return pd.DataFrame(rows).reindex(columns=columns)
+
+
+def json_safe(value):
+    if isinstance(value, dict):
+        return {key: json_safe(item) for key, item in value.items()}
+    if isinstance(value, float) and not np.isfinite(value):
+        return None
+    return value
 
 
 def transition_graph(df: pd.DataFrame, assignment: pd.DataFrame, n_neighbors: int = 8) -> pd.DataFrame:
@@ -312,6 +348,7 @@ def write_report(output_dir: Path, atlas_csv: Path = DEFAULT_ATLAS) -> tuple[Pat
     characterization = regime_characterization(df, assignment)
     predictive = predictive_power(df, assignment)
     equations = within_regime_equations(df, assignment)
+    equation_summary = equation_summary_table(equations)
     graph = transition_graph(df, assignment)
     report = output_dir / "morphology_regime_consolidation.md"
     text = "\n".join([
@@ -331,6 +368,9 @@ def write_report(output_dir: Path, atlas_csv: Path = DEFAULT_ATLAS) -> tuple[Pat
         "## Regime Predictive Power",
         _markdown_table(predictive),
         "",
+        "## Cross-Validated Local Accessibility Laws",
+        _markdown_table(equation_summary),
+        "",
         "## Transition Graph",
         _markdown_table(graph.head(20)),
         "",
@@ -339,7 +379,7 @@ def write_report(output_dir: Path, atlas_csv: Path = DEFAULT_ATLAS) -> tuple[Pat
     ]) + "\n"
     report.write_text(text, encoding="utf-8")
     equations_json = output_dir / "within_regime_equation_scores.json"
-    equations_json.write_text(json.dumps(equations, indent=2, sort_keys=True), encoding="utf-8")
+    equations_json.write_text(json.dumps(json_safe(equations), indent=2, sort_keys=True), encoding="utf-8")
     return (
         report,
         equations_json,
